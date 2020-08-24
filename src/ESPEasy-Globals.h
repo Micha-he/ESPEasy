@@ -28,7 +28,6 @@
 #include "ESPEasy_fdwdecl.h"
 
 #include "src/DataStructs/ESPEasyLimits.h"
-#include "src/Helpers/msecTimerHandlerStruct.h"
 #include "ESPEasy_plugindefs.h"
 #include "src/Globals/Device.h"
 #include "src/Globals/Settings.h"
@@ -276,40 +275,14 @@ extern boolean printToWeb;
 extern String printWebString;
 extern boolean printToWebJSON;
 
-/********************************************************************************************\
-  RTC_cache_struct
-\*********************************************************************************************/
-struct RTC_cache_struct
-{
-  uint32_t checksumData = 0;
-  uint16_t readFileNr = 0;       // File number used to read from.
-  uint16_t writeFileNr = 0;      // File number to write to.
-  uint16_t readPos = 0;          // Read position in file based cache
-  uint16_t writePos = 0;         // Write position in the RTC memory
-  uint32_t checksumMetadata = 0;
-};
 
-struct RTC_cache_handler_struct;
+//struct RTC_cache_handler_struct;
 
 
-/*********************************************************************************************\
- * rulesTimerStruct
-\*********************************************************************************************/
-struct rulesTimerStatus
-{
-  rulesTimerStatus() : timestamp(0), interval(0), paused(false) {}
-
-  unsigned long timestamp;
-  unsigned int interval; //interval in milliseconds
-  bool paused;
-};
-
-extern rulesTimerStatus RulesTimer[RULES_TIMER_MAX];
-
-extern msecTimerHandlerStruct msecTimerHandler;
-
-extern unsigned long timer_gratuitous_arp_interval;
+// FIXME TD-er: Must move this to some proper class (ESPEasy_Scheduler ?)
 extern unsigned long timermqtt_interval;
+
+
 extern unsigned long lastSend;
 extern unsigned long lastWeb;
 extern byte cmd_within_mainloop;
@@ -317,7 +290,7 @@ extern unsigned long wdcounter;
 extern unsigned long timerAPoff;    // Timer to check whether the AP mode should be disabled (0 = disabled)
 extern unsigned long timerAPstart;  // Timer to start AP mode, started when no valid network is detected.
 extern unsigned long timerAwakeFromDeepSleep;
-extern unsigned long last_system_event_run;
+
 
 #if FEATURE_ADC_VCC
 extern float vcc;
@@ -331,18 +304,6 @@ extern int WebLoggedInTimer;
 
 
 extern String dummyString;  // FIXME @TD-er  This may take a lot of memory over time, since long-lived Strings only tend to grow.
-
-enum PluginPtrType {
-  TaskPluginEnum,
-  ControllerPluginEnum,
-  NotificationPluginEnum
-};
-void schedule_event_timer(PluginPtrType ptr_type, byte Index, byte Function, struct EventStruct* event);
-unsigned long createSystemEventMixedId(PluginPtrType ptr_type, byte Index, byte Function);
-unsigned long createSystemEventMixedId(PluginPtrType ptr_type, uint16_t crc16);
-
-
-
 
 
 
@@ -442,14 +403,34 @@ struct GpioFactorySettingsStruct {
         i2c_scl = -1;    // GPIO5 conflicts with SW input
         break;
       case DeviceMode_Olimex_ESP32_PoE:
-        button[0] = 34;    // DUT1 Button
+        button[0] = 34;    // BUT1 Button
         relais[0] = -1;    // No LED's or relays on board
         status_led = -1;
-        i2c_sda = 4;
-        i2c_scl = 5;
+        i2c_sda = 13;
+        i2c_scl = 16;
+        eth_phyaddr = 0;
+        eth_phytype = 0;     // LAN8710
+        eth_mdc = 23;
+        eth_mdio = 18;
         eth_power = 12;
-        eth_clock_mode = 3;
-        eth_wifi_mode = 1;
+        eth_clock_mode = 3; // 50MHz APLL Inverted Output on GPIO17
+        eth_wifi_mode = 1;  // default to ethernet
+        break;
+      case DeviceMode_Olimex_ESP32_EVB:
+        button[0] = 34;      // BUT1 Button
+        relais[0] = 32;      // LED1 + Relay1 (0 = Off, 1 = On)
+        relais[1] = 33;      // LED2 + Relay2 (0 = Off, 1 = On)
+
+        status_led = -1;
+        i2c_sda = 13;
+        i2c_scl = 16;
+        eth_phyaddr = 0;
+        eth_phytype = 0;     // LAN8710
+        eth_mdc = 23;
+        eth_mdio = 18;
+        eth_power = -1;      // No Ethernet power pin
+        eth_clock_mode = 0;  // External crystal oscillator
+        eth_wifi_mode = 1;   // default to ethernet
         break;
 
       // case DeviceModel_default: break;
