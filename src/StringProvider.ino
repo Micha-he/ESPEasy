@@ -184,8 +184,8 @@ String getValue(LabelType::Enum label) {
     case LabelType::SSID:                   return WiFi.SSID();
     case LabelType::BSSID:                  return WiFi.BSSIDstr();
     case LabelType::CHANNEL:                return String(WiFi.channel());
-    case LabelType::CONNECTED:              return format_msec_duration(timeDiff(lastConnectMoment, millis()));
-    case LabelType::CONNECTED_MSEC:         return String(timeDiff(lastConnectMoment, millis()));
+    case LabelType::CONNECTED:              return format_msec_duration(lastConnectMoment.millisPassedSince());
+    case LabelType::CONNECTED_MSEC:         return String(static_cast<int32_t>(lastConnectMoment.millisPassedSince() / 1000ll)) + F("000");
     case LabelType::LAST_DISCONNECT_REASON: return String(lastDisconnectReason);
     case LabelType::LAST_DISC_REASON_STR:   return getLastDisconnectReason();
     case LabelType::NUMBER_RECONNECTS:      return String(wifi_reconnects);
@@ -240,7 +240,7 @@ String getValue(LabelType::Enum label) {
     case LabelType::ETH_SPEED:              return eth_connected ? getEthSpeed() : F("No Ethernet");
     case LabelType::ETH_STATE:              return eth_connected ? (ETH.linkUp() ? F("Link Up") : F("Link Down")) : F("No Ethernet");
     case LabelType::ETH_SPEED_STATE:        return eth_connected ? getEthLinkSpeedState() : F("No Ethernet");
-    case LabelType::ETH_WIFI_MODE:          return (eth_wifi_mode == WIFI ? F("WIFI") : F("ETHERNET"));
+    case LabelType::ETH_WIFI_MODE:          return (active_network_medium == NetworkMedium_t::WIFI ? F("WIFI") : F("ETHERNET"));
     case LabelType::ETH_CONNECTED:          return (eth_connected ? F("CONNECTED") : F("DISCONNECTED")); // 0=disconnected, 1=connected
 #endif
 

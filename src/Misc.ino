@@ -602,6 +602,7 @@ String getPinModeString(byte mode) {
     case PIN_MODE_UNDEFINED:    return F("undefined");
     case PIN_MODE_INPUT:        return F("input");
     case PIN_MODE_INPUT_PULLUP: return F("input pullup");
+    case PIN_MODE_INPUT_PULLDOWN: return F("input pulldown");
     case PIN_MODE_OFFLINE:      return F("offline");
     case PIN_MODE_OUTPUT:       return F("output");
     case PIN_MODE_PWM:          return F("PWM");
@@ -1068,7 +1069,7 @@ void ResetFactory()
   Settings.ETH_Pin_power           = gpio_settings.eth_power;
   Settings.ETH_Phy_Type            = gpio_settings.eth_phytype;
   Settings.ETH_Clock_Mode          = gpio_settings.eth_clock_mode;
-  Settings.ETH_Wifi_Mode           = gpio_settings.eth_wifi_mode;
+  Settings.NetworkMedium           = gpio_settings.active_network_medium;
 
 /*
 	Settings.GlobalSync						= DEFAULT_USE_GLOBAL_SYNC;
@@ -1380,8 +1381,7 @@ String parseTemplate_padded(String& tmpString, byte minimal_lineSize, bool useUR
           }
         } else {
           // try if this is a get config request
-          struct EventStruct TempEvent;
-          TempEvent.TaskIndex = taskIndex;
+          struct EventStruct TempEvent(taskIndex);
           String tmpName = valueName;
 
           if (PluginCall(PLUGIN_GET_CONFIG, &TempEvent, tmpName))
@@ -1478,7 +1478,7 @@ byte findDeviceValueIndexByName(const String& valueName, taskIndex_t taskIndex)
   }
   LoadTaskSettings(taskIndex); // Probably already loaded, but just to be sure
 
-  const byte valCount = Device[deviceIndex].ValueCount;
+  const byte valCount = getValueCountForTask(taskIndex);
   for (byte valueNr = 0; valueNr < valCount; valueNr++)
   {
     // Check case insensitive, since the user entered value name can have any case.
@@ -1580,7 +1580,7 @@ void transformValue(
     if (valueFormat.length() > 0) //do the checks only if a Format is defined to optimize loop
     {
       int logicVal = 0;
-      float valFloat = 0.0;
+      float valFloat = 0.0f;
       if (validFloatFromString(value, valFloat))
       {
         //to be used for binary values (0 or 1)
@@ -1883,7 +1883,7 @@ float pop()
   if (sp != (globalstack - 1)) // empty
     return *(sp--);
   else
-    return 0.0;
+    return 0.0f;
 }
 
 float apply_operator(char op, float first, float second)
@@ -2229,7 +2229,8 @@ void SendValueLogger(taskIndex_t TaskIndex)
     const deviceIndex_t DeviceIndex = getDeviceIndex_from_TaskIndex(TaskIndex);
     if (validDeviceIndex(DeviceIndex)) {
       LoadTaskSettings(TaskIndex);
-      for (byte varNr = 0; varNr < Device[DeviceIndex].ValueCount; varNr++)
+      const byte valueCount = getValueCountForTask(TaskIndex);
+      for (byte varNr = 0; varNr < valueCount; varNr++)
       {
         logger += node_time.getDateString('-');
         logger += ' ';
@@ -2591,26 +2592,26 @@ uint16_t getPortFromKey(uint32_t key) {
 void HSV2RGB(float H, float S, float I, int rgb[3]) {
   int r, g, b;
   H = fmod(H,360); // cycle H around to 0-360 degrees
-  H = 3.14159*H/(float)180; // Convert to radians.
+  H = 3.14159f*H/(float)180; // Convert to radians.
   S = S / 100;
   S = S>0?(S<1?S:1):0; // clamp S and I to interval [0,1]
   I = I / 100;
   I = I>0?(I<1?I:1):0;
 
   // Math! Thanks in part to Kyle Miller.
-  if(H < 2.09439) {
-    r = 255*I/3*(1+S*cos(H)/cos(1.047196667-H));
-    g = 255*I/3*(1+S*(1-cos(H)/cos(1.047196667-H)));
+  if(H < 2.09439f) {
+    r = 255*I/3*(1+S*cos(H)/cos(1.047196667f-H));
+    g = 255*I/3*(1+S*(1-cos(H)/cos(1.047196667f-H)));
     b = 255*I/3*(1-S);
-  } else if(H < 4.188787) {
-    H = H - 2.09439;
-    g = 255*I/3*(1+S*cos(H)/cos(1.047196667-H));
-    b = 255*I/3*(1+S*(1-cos(H)/cos(1.047196667-H)));
+  } else if(H < 4.188787f) {
+    H = H - 2.09439f;
+    g = 255*I/3*(1+S*cos(H)/cos(1.047196667f-H));
+    b = 255*I/3*(1+S*(1-cos(H)/cos(1.047196667f-H)));
     r = 255*I/3*(1-S);
   } else {
-    H = H - 4.188787;
-    b = 255*I/3*(1+S*cos(H)/cos(1.047196667-H));
-    r = 255*I/3*(1+S*(1-cos(H)/cos(1.047196667-H)));
+    H = H - 4.188787f;
+    b = 255*I/3*(1+S*cos(H)/cos(1.047196667f-H));
+    r = 255*I/3*(1+S*(1-cos(H)/cos(1.047196667f-H)));
     g = 255*I/3*(1-S);
   }
   rgb[0]=r;
@@ -2625,31 +2626,31 @@ void HSV2RGBW(float H, float S, float I, int rgbw[4]) {
   int r, g, b, w;
   float cos_h, cos_1047_h;
   H = fmod(H,360); // cycle H around to 0-360 degrees
-  H = 3.14159*H/(float)180; // Convert to radians.
+  H = 3.14159f*H/(float)180; // Convert to radians.
   S = S / 100;
   S = S>0?(S<1?S:1):0; // clamp S and I to interval [0,1]
   I = I / 100;
   I = I>0?(I<1?I:1):0;
 
-  if(H < 2.09439) {
+  if(H < 2.09439f) {
     cos_h = cos(H);
-    cos_1047_h = cos(1.047196667-H);
+    cos_1047_h = cos(1.047196667f-H);
     r = S*255*I/3*(1+cos_h/cos_1047_h);
     g = S*255*I/3*(1+(1-cos_h/cos_1047_h));
     b = 0;
     w = 255*(1-S)*I;
-  } else if(H < 4.188787) {
-    H = H - 2.09439;
+  } else if(H < 4.188787f) {
+    H = H - 2.09439f;
     cos_h = cos(H);
-    cos_1047_h = cos(1.047196667-H);
+    cos_1047_h = cos(1.047196667f-H);
     g = S*255*I/3*(1+cos_h/cos_1047_h);
     b = S*255*I/3*(1+(1-cos_h/cos_1047_h));
     r = 0;
     w = 255*(1-S)*I;
   } else {
-    H = H - 4.188787;
+    H = H - 4.188787f;
     cos_h = cos(H);
-    cos_1047_h = cos(1.047196667-H);
+    cos_1047_h = cos(1.047196667f-H);
     b = S*255*I/3*(1+cos_h/cos_1047_h);
     r = S*255*I/3*(1+(1-cos_h/cos_1047_h));
     g = 0;

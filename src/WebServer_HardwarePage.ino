@@ -40,14 +40,13 @@ void handle_hardware() {
     Settings.ETH_Pin_mdc              = getFormItemInt(F("ethmdc"));
     Settings.ETH_Pin_mdio             = getFormItemInt(F("ethmdio"));
     Settings.ETH_Pin_power            = getFormItemInt(F("ethpower"));
-    Settings.ETH_Phy_Type             = getFormItemInt(F("ethtype"));
-    Settings.ETH_Clock_Mode           = getFormItemInt(F("ethclock"));
-    Settings.ETH_Wifi_Mode            = getFormItemInt(F("ethwifi"));
+    Settings.ETH_Phy_Type             = static_cast<EthPhyType_t>(getFormItemInt(F("ethtype")));
+    Settings.ETH_Clock_Mode           = static_cast<EthClockMode_t>(getFormItemInt(F("ethclock")));
+    Settings.NetworkMedium            = static_cast<NetworkMedium_t>(getFormItemInt(F("ethwifi")));
 #endif
     int gpio = 0;
 
-    // FIXME TD-er: Max of 17 is a limit in the Settings.PinBootStates array
-    while (gpio < MAX_GPIO  && gpio < 17) {
+    while (gpio <= MAX_GPIO) {
       if (Settings.UseSerial && ((gpio == 1) || (gpio == 3))) {
         // do not add the pin state select for these pins.
       } else {
@@ -56,8 +55,8 @@ void handle_hardware() {
 
         if (getGpioInfo(gpio, pinnr, input, output, warning)) {
           String int_pinlabel = "p";
-          int_pinlabel                += gpio;
-          Settings.PinBootStates[gpio] = getFormItemInt(int_pinlabel);
+          int_pinlabel       += gpio;
+          Settings.setPinBootState(gpio, static_cast<PinBootState>(getFormItemInt(int_pinlabel)));
         }
       }
       ++gpio;
@@ -153,49 +152,36 @@ void handle_hardware() {
 #ifdef HAS_ETHERNET
   addFormSubHeader(F("Ethernet"));
   addRowLabel_tr_id(F("Preferred network medium"), "ethwifi");
-  String ethWifiOptions[2] = { F("WiFi"), F("Ethernet") };
-  addSelector("ethwifi", 2, ethWifiOptions, NULL, NULL, Settings.ETH_Wifi_Mode, false, true);
+  String ethWifiOptions[2] = {
+    toString(NetworkMedium_t::WIFI), 
+    toString(NetworkMedium_t::Ethernet) 
+    };
+  addSelector("ethwifi", 2, ethWifiOptions, NULL, NULL, static_cast<int>(Settings.NetworkMedium), false, true);
   addFormNote(F("Change Switch between WiFi and Ethernet requires reboot to activate"));
   addRowLabel_tr_id(F("Ethernet PHY type"), "ethtype");
-  String ethPhyTypes[2] = { F("LAN8710"), F("TLK110") };
-  addSelector("ethtype", 2, ethPhyTypes, NULL, NULL, Settings.ETH_Phy_Type, false, true);
+  String ethPhyTypes[2] = { 
+    toString(EthPhyType_t::LAN8710), 
+    toString(EthPhyType_t::TLK110) };
+  addSelector("ethtype", 2, ethPhyTypes, NULL, NULL, static_cast<int>(Settings.ETH_Phy_Type), false, true);
   addFormNumericBox(F("Ethernet PHY Address"), "ethphy", Settings.ETH_Phy_Addr, 0, 255);
   addFormNote(F("I&sup2;C-address of Ethernet PHY (0 or 1 for LAN8720, 31 for TLK110)"));
   addFormPinSelect(formatGpioName_output("Ethernet MDC pin"), "ethmdc", Settings.ETH_Pin_mdc);
   addFormPinSelect(formatGpioName_input("Ethernet MIO pin"), "ethmdio", Settings.ETH_Pin_mdio);
   addFormPinSelect(formatGpioName_output("Ethernet Power pin"), "ethpower", Settings.ETH_Pin_power);
   addRowLabel_tr_id(F("Ethernet Clock"), "ethclock");
-  String ethClockOptions[4] = { F("External crystal oscillator"),
-                            F("50MHz APLL Output on GPIO0"),
-                            F("50MHz APLL Output on GPIO16"),
-                            F("50MHz APLL Inverted Output on GPIO17") };
-  addSelector("ethclock", 4, ethClockOptions, NULL, NULL, Settings.ETH_Clock_Mode, false, true);
+  String ethClockOptions[4] = { 
+    toString(EthClockMode_t::Ext_crystal_osc),
+    toString(EthClockMode_t::Int_50MHz_GPIO_0),
+    toString(EthClockMode_t::Int_50MHz_GPIO_16),
+    toString(EthClockMode_t::Int_50MHz_GPIO_17_inv)
+     };
+  addSelector("ethclock", 4, ethClockOptions, NULL, NULL, static_cast<int>(Settings.ETH_Clock_Mode), false, true);
 #endif // ifdef HAS_ETHERNET
 
   addFormSubHeader(F("GPIO boot states"));
-  int gpio = 0;
 
-  // FIXME TD-er: Max of 17 is a limit in the Settings.PinBootStates array
-  while (gpio < MAX_GPIO  && gpio < 17) {
-    bool enabled = true;
-
-    if (Settings.UseSerial && ((gpio == 1) || (gpio == 3))) {
-      // do not add the pin state select for these pins.
-      enabled = false;
-    }
-    int  pinnr = -1;
-    bool input, output, warning;
-
-    if (getGpioInfo(gpio, pinnr, input, output, warning)) {
-      String label;
-      label.reserve(32);
-      label  = F("Pin mode ");
-      label += createGPIO_label(gpio, pinnr, input, output, warning);
-      String int_pinlabel = "p";
-      int_pinlabel += gpio;
-      addFormPinStateSelect(label, int_pinlabel, Settings.PinBootStates[gpio], enabled);
-    }
-    ++gpio;
+  for (int gpio = 0; gpio <= MAX_GPIO; ++gpio) {
+    addFormPinStateSelect(gpio, static_cast<int>(Settings.getPinBootState(gpio)));
   }
   addFormSeparator(2);
 

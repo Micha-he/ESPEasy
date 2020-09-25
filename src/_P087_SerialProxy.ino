@@ -56,7 +56,7 @@ boolean Plugin_087(byte function, struct EventStruct *event, String& string) {
     case PLUGIN_DEVICE_ADD: {
       Device[++deviceCount].Number           = PLUGIN_ID_087;
       Device[deviceCount].Type               = DEVICE_TYPE_SERIAL;
-      Device[deviceCount].VType              = SENSOR_TYPE_STRING;
+      Device[deviceCount].VType              = Sensor_VType::SENSOR_TYPE_STRING;
       Device[deviceCount].Ports              = 0;
       Device[deviceCount].PullUpOption       = false;
       Device[deviceCount].InverseLogicOption = false;
@@ -127,11 +127,14 @@ boolean Plugin_087(byte function, struct EventStruct *event, String& string) {
       break;
     }
 
-    case PLUGIN_WEBFORM_LOAD: {
-      serialHelper_webformLoad(event);
+    case PLUGIN_WEBFORM_SHOW_SERIAL_PARAMS:
+    {
       addFormNumericBox(F("Baudrate"), P087_BAUDRATE_LABEL, P087_BAUDRATE, 2400, 115200);
       addUnit(F("baud"));
+      break;
+    }
 
+    case PLUGIN_WEBFORM_LOAD: {
       addFormSubHeader(F("Filtering"));
       P087_html_show_matchForms(event);
 
@@ -143,7 +146,6 @@ boolean Plugin_087(byte function, struct EventStruct *event, String& string) {
     }
 
     case PLUGIN_WEBFORM_SAVE: {
-      serialHelper_webformSave(event);
       P087_BAUDRATE = getFormItemInt(P087_BAUDRATE_LABEL);
 
       P087_data_struct *P087_data =
@@ -165,7 +167,7 @@ boolean Plugin_087(byte function, struct EventStruct *event, String& string) {
     case PLUGIN_INIT: {
       const int16_t serial_rx = CONFIG_PIN1;
       const int16_t serial_tx = CONFIG_PIN2;
-      initPluginTaskData(event->TaskIndex, new P087_data_struct());
+      initPluginTaskData(event->TaskIndex, new (std::nothrow) P087_data_struct());
       P087_data_struct *P087_data =
         static_cast<P087_data_struct *>(getPluginTaskData(event->TaskIndex));
 
@@ -181,12 +183,6 @@ boolean Plugin_087(byte function, struct EventStruct *event, String& string) {
       } else {
         clearPluginTaskData(event->TaskIndex);
       }
-      break;
-    }
-
-    case PLUGIN_EXIT: {
-      clearPluginTaskData(event->TaskIndex);
-      success = true;
       break;
     }
 

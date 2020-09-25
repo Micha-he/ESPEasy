@@ -11,7 +11,7 @@ void handle_dumpcache() {
   unsigned long timestamp;
   byte  controller_idx;
   byte  TaskIndex;
-  byte  sensorType;
+  Sensor_VType  sensorType;
   byte  valueCount;
   float val1;
   float val2;
@@ -35,7 +35,7 @@ void handle_dumpcache() {
   float csv_values[VARS_PER_TASK * TASKS_MAX];
 
   for (int i = 0; i < VARS_PER_TASK * TASKS_MAX; ++i) {
-    csv_values[i] = 0.0;
+    csv_values[i] = 0.0f;
   }
 
   while (C016_getCSVline(timestamp, controller_idx, TaskIndex, sensorType,
@@ -47,7 +47,7 @@ void handle_dumpcache() {
       html += ';';
       html += controller_idx;
       html += ';';
-      html += sensorType;
+      html += static_cast<byte>(sensorType);
       html += ';';
       html += TaskIndex;
       html += ';';
@@ -65,7 +65,7 @@ void handle_dumpcache() {
       html.reserve(12);
       html += ';';
 
-      if (csv_values[i] == 0.0) {
+      if (csv_values[i] == 0.0f) {
         html += '0';
       } else {
         html += String(csv_values[i], 6);

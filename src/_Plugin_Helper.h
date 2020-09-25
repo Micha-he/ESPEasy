@@ -7,6 +7,7 @@
 #include "ESPEasy_Log.h"
 #include "ESPEasy_fdwdecl.h"
 #include "ESPEasy_plugindefs.h"
+#include "src/DataStructs/DeviceStruct.h"
 #include "src/DataStructs/ESPEasyLimits.h"
 #include "src/DataStructs/ESPEasy_EventStruct.h"
 #include "src/Globals/Device.h"
@@ -14,6 +15,7 @@
 #include "src/Globals/Plugins.h"
 #include "src/Globals/ESPEasy_Scheduler.h"
 #include "src/Helpers/ESPEasy_time_calc.h"
+#include "src/Helpers/I2C_access.h"
 
 // Defines to make plugins more readable.
 
@@ -97,5 +99,9 @@ bool pluginOptionalTaskIndexArgumentMatch(taskIndex_t   taskIndex,
                                           const String& string,
                                           byte          paramNr);
 
+int getValueCountForTask(taskIndex_t   taskIndex);
+
+Sensor_VType getDeviceVTypeForTask(taskIndex_t taskIndex);
+Sensor_VType getDeviceVTypeForTask(taskIndex_t taskIndex, int& pconfig_index);
 
 #endif // PLUGIN_HELPER_H

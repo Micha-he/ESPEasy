@@ -28,7 +28,7 @@ boolean Plugin_028(byte function, struct EventStruct *event, String& string)
     {
       Device[++deviceCount].Number           = PLUGIN_ID_028;
       Device[deviceCount].Type               = DEVICE_TYPE_I2C;
-      Device[deviceCount].VType              = SENSOR_TYPE_TEMP_HUM_BARO;
+      Device[deviceCount].VType              = Sensor_VType::SENSOR_TYPE_TEMP_HUM_BARO;
       Device[deviceCount].Ports              = 0;
       Device[deviceCount].PullUpOption       = false;
       Device[deviceCount].InverseLogicOption = false;
@@ -56,7 +56,7 @@ boolean Plugin_028(byte function, struct EventStruct *event, String& string)
 
     case PLUGIN_INIT:
     {
-      initPluginTaskData(event->TaskIndex, new P028_data_struct(PCONFIG(0)));
+      initPluginTaskData(event->TaskIndex, new (std::nothrow) P028_data_struct(PCONFIG(0)));
       P028_data_struct *P028_data =
         static_cast<P028_data_struct *>(getPluginTaskData(event->TaskIndex));
 
@@ -65,13 +65,6 @@ boolean Plugin_028(byte function, struct EventStruct *event, String& string)
       }
       success = true;
 
-      break;
-    }
-
-    case PLUGIN_EXIT:
-    {
-      clearPluginTaskData(event->TaskIndex);
-      success = true;
       break;
     }
 
@@ -128,7 +121,7 @@ boolean Plugin_028(byte function, struct EventStruct *event, String& string)
         static_cast<P028_data_struct *>(getPluginTaskData(event->TaskIndex));
 
       if (nullptr != P028_data) {
-        const float tempOffset = PCONFIG(2) / 10.0;
+        const float tempOffset = PCONFIG(2) / 10.0f;
 
         if (P028_data->updateMeasurements(tempOffset, event->TaskIndex)) {
           // Update was succesfull, schedule a read.
@@ -152,7 +145,7 @@ boolean Plugin_028(byte function, struct EventStruct *event, String& string)
 
         if (!P028_data->hasHumidity()) {
           // Patch the sensor type to output only the measured values.
-          event->sensorType = SENSOR_TYPE_TEMP_EMPTY_BARO;
+          event->sensorType = Sensor_VType::SENSOR_TYPE_TEMP_EMPTY_BARO;
         }
         UserVar[event->BaseVarIndex]     = P028_data->last_temp_val;
         UserVar[event->BaseVarIndex + 1] = P028_data->last_hum_val;

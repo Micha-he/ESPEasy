@@ -78,7 +78,7 @@ boolean Plugin_030(byte function, struct EventStruct *event, String& string)
     {
       Device[++deviceCount].Number           = PLUGIN_ID_030;
       Device[deviceCount].Type               = DEVICE_TYPE_I2C;
-      Device[deviceCount].VType              = SENSOR_TYPE_TEMP_BARO;
+      Device[deviceCount].VType              = Sensor_VType::SENSOR_TYPE_TEMP_BARO;
       Device[deviceCount].Ports              = 0;
       Device[deviceCount].PullUpOption       = false;
       Device[deviceCount].InverseLogicOption = false;
@@ -319,14 +319,14 @@ float Plugin_030_readAltitude(float seaLevel)
 {
   float atmospheric = Plugin_030_readPressure(bmp280_i2caddr & 0x01) / 100.0F;
 
-  return 44330.0 * (1.0 - pow(atmospheric / seaLevel, 0.1903));
+  return 44330.0f * (1.0f - pow(atmospheric / seaLevel, 0.1903f));
 }
 
 // **************************************************************************/
 // MSL pressure formula
 // **************************************************************************/
 float Plugin_030_pressureElevation(float atmospheric, int altitude) {
-  return atmospheric / pow(1.0 - (altitude / 44330.0), 5.255);
+  return atmospheric / pow(1.0f - (altitude / 44330.0f), 5.255f);
 }
 
 #endif // USES_P030

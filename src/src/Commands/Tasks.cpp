@@ -11,17 +11,20 @@
 //	varNr = event->Par2 - 1;
 bool validTaskVars(struct EventStruct *event, taskIndex_t& taskIndex, unsigned int& varNr)
 {
+  if (event == nullptr) { return false; }
   if (event->Par1 <= 0) { return false; }
-  taskIndex = static_cast<taskIndex_t>(event->Par1 - 1);
+  taskIndex_t tmp_taskIndex = static_cast<taskIndex_t>(event->Par1 - 1);
   varNr     = 0;
 
   if (event->Par2 > 0) {
     varNr = event->Par2 - 1;
   }
 
-  if (!validTaskIndex(taskIndex)) { return false; }
+  if (!validTaskIndex(tmp_taskIndex)) { return false; }
 
   if (varNr >= VARS_PER_TASK) { return false; }
+
+  taskIndex = tmp_taskIndex;
 
   return true;
 }
@@ -142,9 +145,7 @@ String Command_Task_Run(struct EventStruct *event, const char *Line)
 
 String Command_Task_RemoteConfig(struct EventStruct *event, const char *Line)
 {
-  struct EventStruct TempEvent;
-
-  TempEvent.TaskIndex = event->TaskIndex;
+  struct EventStruct TempEvent(event->TaskIndex);
   String request = Line;
 
   // FIXME TD-er: Should we call ExecuteCommand here? The command is not parsed like any other call.

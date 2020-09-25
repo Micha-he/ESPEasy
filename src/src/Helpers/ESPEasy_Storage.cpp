@@ -184,23 +184,25 @@ String BuildFixes()
     controllerIndex_t controller_idx = firstEnabledMQTT_ControllerIndex();
     if (validControllerIndex(controller_idx)) {
       MakeControllerSettings(ControllerSettings);
-      LoadControllerSettings(controller_idx, ControllerSettings);
+      if (AllocatedControllerSettings()) {
+        LoadControllerSettings(controller_idx, ControllerSettings);
 
-      String clientid;
-      if (Settings.MQTTUseUnitNameAsClientId_unused) {
-        clientid = F("%sysname%");
-        if (Settings.appendUnitToHostname()) {
-          clientid += F("_%unit%");
+        String clientid;
+        if (Settings.MQTTUseUnitNameAsClientId_unused) {
+          clientid = F("%sysname%");
+          if (Settings.appendUnitToHostname()) {
+            clientid += F("_%unit%");
+          }
         }
-      }
-      else {
-        clientid  = F("ESPClient_%mac%");
-      }
-      safe_strncpy(ControllerSettings.ClientID, clientid, sizeof(ControllerSettings.ClientID));
+        else {
+          clientid  = F("ESPClient_%mac%");
+        }
+        safe_strncpy(ControllerSettings.ClientID, clientid, sizeof(ControllerSettings.ClientID));
 
-      ControllerSettings.mqtt_uniqueMQTTclientIdReconnect(Settings.uniqueMQTTclientIdReconnect_unused());
-      ControllerSettings.mqtt_retainFlag(Settings.MQTTRetainFlag_unused);
-      SaveControllerSettings(controller_idx, ControllerSettings);
+        ControllerSettings.mqtt_uniqueMQTTclientIdReconnect(Settings.uniqueMQTTclientIdReconnect_unused());
+        ControllerSettings.mqtt_retainFlag(Settings.MQTTRetainFlag_unused);
+        SaveControllerSettings(controller_idx, ControllerSettings);
+      }
     }
     #endif // USES_MQTT
   }
@@ -214,7 +216,7 @@ String BuildFixes()
     Settings.ETH_Pin_power  = DEFAULT_ETH_PIN_POWER;
     Settings.ETH_Phy_Type   = DEFAULT_ETH_PHY_TYPE;
     Settings.ETH_Clock_Mode = DEFAULT_ETH_CLOCK_MODE;
-    Settings.ETH_Wifi_Mode  = DEFAULT_ETH_WIFI_MODE;
+    Settings.NetworkMedium  = DEFAULT_NETWORK_MEDIUM;
   }
   if (Settings.Build < 20109) {
     Settings.SyslogPort = 514;
@@ -227,6 +229,14 @@ String BuildFixes()
       Settings.I2C_Multiplexer_Channel[x] = -1;
     }
     Settings.I2C_Multiplexer_ResetPin = -1;
+  }
+  if (Settings.Build < 20111) {
+    #ifdef ESP32
+    constexpr byte maxStatesesp32 = sizeof(Settings.PinBootStates_ESP32) / sizeof(Settings.PinBootStates_ESP32[0]);
+    for (byte i = 0; i < maxStatesesp32; ++i) {
+      Settings.PinBootStates_ESP32[i] = 0;
+    }
+    #endif
   }
 
   Settings.Build = BUILD;
@@ -703,8 +713,7 @@ String LoadTaskSettings(taskIndex_t TaskIndex)
 
   if (ExtraTaskSettings.TaskDeviceValueNames[0][0] == 0) {
     // if field set empty, reload defaults
-    struct EventStruct TempEvent;
-    TempEvent.TaskIndex = TaskIndex;
+    struct EventStruct TempEvent(TaskIndex);
     String tmp;
 
     // the plugin call should populate ExtraTaskSettings with its default values.

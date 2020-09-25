@@ -1,25 +1,26 @@
 #include "ESPEasy_checks.h"
 
-#include "../../ESPEasy_common.h"
 #include "../../ESPEasy-Globals.h"
+#include "../../ESPEasy_common.h"
 
-#include "../DataStructs/NodeStruct.h"
+#include "../DataStructs/C013_p2p_dataStructs.h"
 #include "../DataStructs/CRCStruct.h"
-#include "../DataStructs/SettingsStruct.h"
-
-#include "../DataStructs/SecurityStruct.h"
-#include "../DataStructs/ExtraTaskSettingsStruct.h"
 #include "../DataStructs/ControllerSettingsStruct.h"
-#include "../DataStructs/ESPEasy_EventStruct.h"
-#include "../DataStructs/LogStruct.h"
 #include "../DataStructs/DeviceStruct.h"
-#include "../DataStructs/ProtocolStruct.h"
 #include "../DataStructs/ESPEasy_EventStruct.h"
-#include "../DataStructs/NodeStruct.h"
-#include "../DataStructs/RTCStruct.h"
-#include "../DataStructs/SystemTimerStruct.h"
-#include "../DataStructs/PortStatusStruct.h"
+#include "../DataStructs/ESPEasy_EventStruct.h"
+#include "../DataStructs/ExtraTaskSettingsStruct.h"
 #include "../DataStructs/FactoryDefaultPref.h"
+#include "../DataStructs/GpioFactorySettingsStruct.h"
+#include "../DataStructs/LogStruct.h"
+#include "../DataStructs/NodeStruct.h"
+#include "../DataStructs/NodeStruct.h"
+#include "../DataStructs/PortStatusStruct.h"
+#include "../DataStructs/ProtocolStruct.h"
+#include "../DataStructs/RTCStruct.h"
+#include "../DataStructs/SecurityStruct.h"
+#include "../DataStructs/SettingsStruct.h"
+#include "../DataStructs/SystemTimerStruct.h"
 
 #include "../Globals/ExtraTaskSettings.h"
 
@@ -61,7 +62,12 @@ void run_compiletime_checks() {
   #ifndef LIMIT_BUILD_SIZE
   check_size<CRCStruct,                             204u>();
   check_size<SecurityStruct,                        593u>();
+  #ifdef ESP32
+  const unsigned int SettingsStructSize = (312 + 84 * TASKS_MAX);
+  #endif
+  #ifdef ESP8266
   const unsigned int SettingsStructSize = (288 + 84 * TASKS_MAX);
+  #endif
   check_size<SettingsStruct,                        SettingsStructSize>();
   check_size<ControllerSettingsStruct,              820u>();
   #ifdef USES_NOTIFIER
@@ -74,7 +80,7 @@ void run_compiletime_checks() {
   // Has to be round up to multiple of 4.
   const unsigned int LogStructSize = ((12u + 17 * LOG_STRUCT_MESSAGE_LINES) + 3) & ~3;
   check_size<LogStruct,                             LogStructSize>(); // Is not stored
-  check_size<DeviceStruct,                          7u>();
+  check_size<DeviceStruct,                          8u>(); // Is not stored
   check_size<ProtocolStruct,                        6u>();
   #ifdef USES_NOTIFIER
   check_size<NotificationStruct,                    3u>();
@@ -85,6 +91,8 @@ void run_compiletime_checks() {
   check_size<portStatusStruct,                      4u>();
   check_size<ResetFactoryDefaultPreference_struct,  4u>();
   check_size<GpioFactorySettingsStruct,             18u>();
+  check_size<C013_SensorInfoStruct,                 137u>();
+  check_size<C013_SensorDataStruct,                 24u>();
   #if defined(USE_NON_STANDARD_24_TASKS) && defined(ESP8266)
     static_assert(TASKS_MAX == 24, "TASKS_MAX invalid size");
   #endif
@@ -156,7 +164,7 @@ String checkTaskSettings(taskIndex_t taskIndex) {
     return F("Use unique value names");
   }
   if (!ExtraTaskSettings.checkInvalidCharInNames()) {
-    return F("Invalid character in names. Do not use ',#[]' or space.");
+    return F("Invalid character in names. Do not use ',-+/*=^%!#[]{}()' or space.");
   }
   String deviceName = ExtraTaskSettings.TaskDeviceName;
   if (deviceName.length() == 0) {

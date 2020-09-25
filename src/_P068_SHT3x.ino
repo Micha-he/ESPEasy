@@ -88,8 +88,8 @@ void SHT3X::readFromSensor()
     if (CRC8(data[0], data[1], data[2]) &&
         CRC8(data[3], data[4], data[5]))
     {
-      tmp = ((((data[0] << 8) | data[1]) * 175.0) / 65535.0) - 45.0;
-      hum = ((((data[3] << 8) | data[4]) * 100.0) / 65535.0);
+      tmp = ((((data[0] << 8) | data[1]) * 175.0f) / 65535.0f) - 45.0f;
+      hum = ((((data[3] << 8) | data[4]) * 100.0f) / 65535.0f);
     }
   }
   else
@@ -144,7 +144,7 @@ boolean Plugin_068(byte function, struct EventStruct *event, String& string)
     {
       Device[++deviceCount].Number           = PLUGIN_ID_068;
       Device[deviceCount].Type               = DEVICE_TYPE_I2C;
-      Device[deviceCount].VType              = SENSOR_TYPE_TEMP_HUM;
+      Device[deviceCount].VType              = Sensor_VType::SENSOR_TYPE_TEMP_HUM;
       Device[deviceCount].Ports              = 0;
       Device[deviceCount].PullUpOption       = false;
       Device[deviceCount].InverseLogicOption = false;
@@ -192,7 +192,7 @@ boolean Plugin_068(byte function, struct EventStruct *event, String& string)
 
     case PLUGIN_INIT:
     {
-      initPluginTaskData(event->TaskIndex, new SHT3X(PCONFIG(0)));
+      initPluginTaskData(event->TaskIndex, new (std::nothrow) SHT3X(PCONFIG(0)));
       success = true;
       break;
     }
