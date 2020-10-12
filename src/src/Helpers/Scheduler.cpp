@@ -1,8 +1,12 @@
 #include "Scheduler.h"
 
+#include "../../ESPEasy_common.h"
+#include "../../_Plugin_Helper.h"
+
 #include "../ControllerQueue/DelayQueueElements.h"
 #include "../Globals/RTC.h"
 #include "../Helpers/DeepSleep.h"
+#include "../Helpers/ESPEasyRTC.h"
 #include "../Helpers/PeriodicalActions.h"
 
 #define TIMER_ID_SHIFT    28   // Must be decreased as soon as timers below reach 15
@@ -208,6 +212,13 @@ void ESPEasy_Scheduler::setIntervalTimer(IntervalTimer_e id, unsigned long lastt
     case IntervalTimer_e::TIMER_C018_DELAY_QUEUE:
     case IntervalTimer_e::TIMER_C019_DELAY_QUEUE:
     case IntervalTimer_e::TIMER_C020_DELAY_QUEUE:
+    case IntervalTimer_e::TIMER_C021_DELAY_QUEUE:
+    case IntervalTimer_e::TIMER_C022_DELAY_QUEUE:
+    case IntervalTimer_e::TIMER_C023_DELAY_QUEUE:
+    case IntervalTimer_e::TIMER_C024_DELAY_QUEUE:
+    case IntervalTimer_e::TIMER_C025_DELAY_QUEUE:
+      // When extending this, search for EXTEND_CONTROLLER_IDS 
+      // in the code to find all places that need to be updated too.
       interval = 1000; break;
   }
   unsigned long timer = lasttimer;
@@ -365,8 +376,48 @@ void ESPEasy_Scheduler::process_interval_timer(IntervalTimer_e id, unsigned long
        */
       break;
 
-      // When extending this, also extend in DelayQueueElements.h
-      // Also make sure to extend the "TIMER_C020_DELAY_QUEUE" list of defines.
+    case IntervalTimer_e::TIMER_C021_DELAY_QUEUE:
+      /*
+       #ifdef USES_C021
+            process_c021_delay_queue();
+       #endif
+       */
+      break;
+
+    case IntervalTimer_e::TIMER_C022_DELAY_QUEUE:
+      /*
+       #ifdef USES_C022
+            process_c022_delay_queue();
+       #endif
+       */
+      break;
+
+    case IntervalTimer_e::TIMER_C023_DELAY_QUEUE:
+      /*
+       #ifdef USES_C023
+            process_c023_delay_queue();
+       #endif
+       */
+      break;
+
+    case IntervalTimer_e::TIMER_C024_DELAY_QUEUE:
+      /*
+       #ifdef USES_C024
+            process_c024_delay_queue();
+       #endif
+       */
+      break;
+
+    case IntervalTimer_e::TIMER_C025_DELAY_QUEUE:
+      /*
+       #ifdef USES_C025
+            process_c025_delay_queue();
+       #endif
+       */
+      break;
+
+    // When extending this, search for EXTEND_CONTROLLER_IDS 
+    // in the code to find all places that need to be updated too.
   }
 }
 
@@ -435,9 +486,8 @@ void ESPEasy_Scheduler::process_plugin_task_timer(unsigned long id) {
   systemTimers.erase(mixedTimerId);
 
   if (validDeviceIndex(deviceIndex)) {
-    TempEvent.sensorType = Device[deviceIndex].VType;
-
     if (validUserVarIndex(TempEvent.BaseVarIndex)) {
+      //checkDeviceVTypeForTask(&TempEvent);
       String dummy;
       Plugin_ptr[deviceIndex](PLUGIN_TIMER_IN, &TempEvent, dummy);
     }
@@ -780,12 +830,12 @@ unsigned long ESPEasy_Scheduler::createSystemEventMixedId(PluginPtrType ptr_type
 }
 
 void ESPEasy_Scheduler::schedule_mqtt_controller_event_timer(protocolIndex_t ProtocolIndex,
-                                                             byte            Function,
+                                                             CPlugin::Function Function,
                                                              char           *c_topic,
                                                              byte           *b_payload,
                                                              unsigned int    length) {
   if (validProtocolIndex(ProtocolIndex)) {
-    const unsigned long mixedId = createSystemEventMixedId(PluginPtrType::ControllerPlugin, ProtocolIndex, Function);
+    const unsigned long mixedId = createSystemEventMixedId(PluginPtrType::ControllerPlugin, ProtocolIndex, static_cast<byte>(Function));
     ScheduledEventQueue.emplace_back(mixedId, EventStruct());
     ScheduledEventQueue.back().event.String1 = c_topic;
 
@@ -799,8 +849,8 @@ void ESPEasy_Scheduler::schedule_mqtt_controller_event_timer(protocolIndex_t Pro
   }
 }
 
-void ESPEasy_Scheduler::schedule_notification_event_timer(byte NotificationProtocolIndex, byte Function, struct EventStruct *event) {
-  schedule_event_timer(PluginPtrType::NotificationPlugin, NotificationProtocolIndex, Function, event);
+void ESPEasy_Scheduler::schedule_notification_event_timer(byte NotificationProtocolIndex, NPlugin::Function Function, struct EventStruct *event) {
+  schedule_event_timer(PluginPtrType::NotificationPlugin, NotificationProtocolIndex, static_cast<byte>(Function), event);
 }
 
 void ESPEasy_Scheduler::schedule_event_timer(PluginPtrType ptr_type, byte Index, byte Function, struct EventStruct *event) {

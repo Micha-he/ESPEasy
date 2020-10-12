@@ -8,6 +8,8 @@
 #include "src/Globals/Plugins.h"
 #include "src/Globals/Settings.h"
 #include "src/Globals/SecuritySettings.h"
+#include "src/Helpers/Misc.h"
+#include "src/Helpers/StringParser.h"
 
 
 PluginTaskData_base *Plugin_task_data[TASKS_MAX] = { nullptr, };
@@ -136,18 +138,14 @@ int getValueCountForTask(taskIndex_t   taskIndex) {
   return TempEvent.Par1;
 }
 
-Sensor_VType getDeviceVTypeForTask(taskIndex_t   taskIndex) {
-  int dummyIndex;
-  return getDeviceVTypeForTask(taskIndex, dummyIndex);
-}
-
-Sensor_VType getDeviceVTypeForTask(taskIndex_t   taskIndex, int& pconfig_index) {
-  struct EventStruct TempEvent(taskIndex);
-  String dummy;
-  if (PluginCall(PLUGIN_GET_DEVICEVTYPE, &TempEvent, dummy)) {
-    pconfig_index = TempEvent.idx;
-  } else {
-    pconfig_index = -1;
+int checkDeviceVTypeForTask(struct EventStruct* event) {
+  if (event->sensorType == Sensor_VType::SENSOR_TYPE_NOT_SET) {
+    if (validTaskIndex(event->TaskIndex)) {
+      String dummy;
+      if (PluginCall(PLUGIN_GET_DEVICEVTYPE, event, dummy)) {
+        return event->idx; // pconfig_index
+      }
+    }
   }
-  return TempEvent.sensorType;
+  return -1;
 }

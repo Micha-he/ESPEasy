@@ -25,6 +25,8 @@ The controller can deliver the data to:
 <TODO>
 */
 
+#include "src/DataStructs/ESPEasyControllerCache.h"
+
 #define CPLUGIN_016
 #define CPLUGIN_ID_016         16
 #define CPLUGIN_NAME_016       "Cache Controller [Experimental]"
@@ -95,7 +97,7 @@ bool CPlugin_016(CPlugin::Function function, struct EventStruct *event, String& 
     case CPlugin::Function::CPLUGIN_PROTOCOL_SEND:
       {
         // Collect the values at the same run, to make sure all are from the same sample
-        byte valueCount = getValueCountFromSensorType(event->sensorType);
+        byte valueCount = getValueCountForTask(event->TaskIndex);
         C016_queue_element element(event, valueCount, node_time.getUnixTime());
         success = ControllerCache.write((uint8_t*)&element, sizeof(element));
 

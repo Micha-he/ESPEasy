@@ -47,7 +47,24 @@ int espeasy_analogRead(int pin, bool readAsTouch);
 /********************************************************************************************\
    Hardware information
  \*********************************************************************************************/
+uint32_t getFlashChipId();
+
 uint32_t getFlashRealSizeInBytes();
+
+bool    puyaSupport();
+
+uint8_t getFlashChipVendorId();
+
+bool    flashChipVendorPuya();
+
+// Last 24 bit of MAC address as integer, to be used in rules.
+uint32_t getChipId();
+
+uint8_t getChipCores();
+
+String getChipModel();
+
+uint8_t getChipRevision();
 
 /********************************************************************************************\
    Hardware specific configurations
