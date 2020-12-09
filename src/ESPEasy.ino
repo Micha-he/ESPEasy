@@ -12,6 +12,13 @@
 // If Custom.h build from Arduino IDE is needed, uncomment #define USE_CUSTOM_H in ESPEasy_common.h
 #include "ESPEasy_common.h"
 
+#ifdef USE_CUSTOM_H
+// make the compiler show a warning to confirm that this file is inlcuded
+  #warning "**** Using Settings from Custom.h File ***"
+#endif
+
+
+
 // Needed due to preprocessor issues.
 #ifdef PLUGIN_SET_GENERIC_ESP32
   #ifndef ESP32
@@ -93,27 +100,34 @@
 // Must be included after all the defines, since it is using TASKS_MAX
 #include "_Plugin_Helper.h"
 // Plugin helper needs the defined controller sets, thus include after 'define_plugin_sets.h'
-#include "_CPlugin_Helper.h"
+#include "src/Helpers/_CPlugin_Helper.h"
 
-#include "ESPEasyWiFi_credentials.h"
-#include "ESPEasyWifi.h"
-#include "ESPEasyWifi_ProcessEvent.h"
 
 #include "src/DataStructs/ControllerSettingsStruct.h"
-#include "src/DataStructs/DeviceModel.h"
 #include "src/DataStructs/ESPEasy_EventStruct.h"
 #include "src/DataStructs/PortStatusStruct.h"
 #include "src/DataStructs/ProtocolStruct.h"
 #include "src/DataStructs/RTCStruct.h"
-#include "src/DataStructs/SettingsType.h"
 #include "src/DataStructs/SystemTimerStruct.h"
 #include "src/DataStructs/TimingStats.h"
 #include "src/DataStructs/tcp_cleanup.h"
+
+#include "src/DataTypes/DeviceModel.h"
+#include "src/DataTypes/SettingsType.h"
+
+#include "src/ESPEasyCore/ESPEasy_Log.h"
+#include "src/ESPEasyCore/ESPEasyNetwork.h"
+#include "src/ESPEasyCore/ESPEasyRules.h"
+#include "src/ESPEasyCore/ESPEasyWifi.h"
+#include "src/ESPEasyCore/ESPEasyWiFi_credentials.h"
+#include "src/ESPEasyCore/ESPEasyWifi_ProcessEvent.h"
+#include "src/ESPEasyCore/Serial.h"
 
 #include "src/Globals/CPlugins.h"
 #include "src/Globals/Device.h"
 #include "src/Globals/ESPEasyWiFiEvent.h"
 #include "src/Globals/ESPEasy_Scheduler.h"
+#include "src/Globals/ESPEasy_time.h"
 #include "src/Globals/EventQueue.h"
 #include "src/Globals/ExtraTaskSettings.h"
 #include "src/Globals/GlobalMapPortStatus.h"
@@ -137,10 +151,13 @@
 #include "src/Helpers/Memory.h"
 #include "src/Helpers/Misc.h"
 #include "src/Helpers/Network.h"
+#include "src/Helpers/Networking.h"
 #include "src/Helpers/OTA.h"
 #include "src/Helpers/PeriodicalActions.h"
 #include "src/Helpers/Scheduler.h"
 #include "src/Helpers/StringGenerator_System.h"
+
+#include "src/WebServer/WebServer.h"
 
 #if FEATURE_ADC_VCC
 ADC_MODE(ADC_VCC);
@@ -167,7 +184,7 @@ void preinit() {
 /*********************************************************************************************\
  * ISR call back function for handling the watchdog.
 \*********************************************************************************************/
-void sw_watchdog_callback(void *arg) 
+void sw_watchdog_callback(void *arg)
 {
   yield(); // feed the WD
   ++sw_watchdog_callback_count;
@@ -187,8 +204,10 @@ void setup()
   initWiFi();
   
   run_compiletime_checks();
+#ifndef BUILD_NO_RAM_TRACKER
   lowestFreeStack = getFreeStackWatermark();
   lowestRAM = FreeMem();
+#endif
 #ifndef ESP32
 //  ets_isr_attach(8, sw_watchdog_callback, NULL);  // Set a callback for feeding the watchdog.
 #endif
@@ -200,21 +219,15 @@ void setup()
   vcc = ESP.getVcc() / 1000.0f;
 #endif
 #ifdef ESP8266
-  lastADCvalue = analogRead(A0);
+  espeasy_analogRead(A0);
 #endif
 
-#ifdef ESP8266
-  // See https://github.com/esp8266/Arduino/commit/a67986915512c5304bd7c161cf0d9c65f66e0892
-  analogWriteRange(1023);
-#endif
-
+  initAnalogWrite();
 
   resetPluginTaskData();
 
+  #ifndef BUILD_NO_RAM_TRACKER
   checkRAM(F("setup"));
-  #if defined(ESP32)
-    for(byte x = 0; x < 16; x++)
-      ledChannelPin[x] = -1;
   #endif
 
   Serial.begin(115200);
@@ -261,7 +274,7 @@ void setup()
     }
 
     log += RTC.bootCounter;
-    log += F(" Last Task: ");
+    log += F(" Last Action before Reboot: ");
     log += ESPEasy_Scheduler::decodeSchedulerId(lastMixedSchedulerId_beforereboot);
     log += F(" Last systime: ");
     log += RTC.lastSysTime;
@@ -324,7 +337,7 @@ void setup()
     }
   }
   if (!selectValidWiFiSettings()) {
-    wifiSetup = true;
+    WiFiEventData.wifiSetup = true;
     RTC.lastWiFiChannel = 0; // Must scan all channels
     // Wait until scan has finished to make sure as many as possible are found
     // We're still in the setup phase, so nothing else is taking resources of the ESP.
@@ -366,8 +379,10 @@ void setup()
 
   if (Settings.UseSerial && Settings.SerialLogLevel >= LOG_LEVEL_DEBUG_MORE)
     Serial.setDebugOutput(true);
-
+  
+  #ifndef BUILD_NO_RAM_TRACKER
   checkRAM(F("hardwareInit"));
+  #endif
   hardwareInit();
 
   timermqtt_interval = 250; // Interval for checking MQTT
@@ -624,14 +639,14 @@ void flushAndDisconnectAllClients() {
       if (mqttControllerEnabled && MQTTclient.connected()) {
         MQTTclient.loop();
       }
-#endif //USES_MQTT      
+#endif //USES_MQTT
     }
-#ifdef USES_MQTT    
+#ifdef USES_MQTT
     if (mqttControllerEnabled && MQTTclient.connected()) {
       MQTTclient.disconnect();
       updateMQTTclient_connected();
     }
-#endif //USES_MQTT      
+#endif //USES_MQTT
     saveToRTC();
     delay(100); // Flush anything in the network buffers.
   }

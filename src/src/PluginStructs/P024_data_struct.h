@@ -2,9 +2,8 @@
 #define PLUGINSTRUCTS_P024_DATA_STRUCT_H
 
 #include "../../_Plugin_Helper.h"
-#include "../../ESPEasy_common.h"
-
 #ifdef USES_P024
+
 
 struct P024_data_struct : public PluginTaskData_base {
 public:

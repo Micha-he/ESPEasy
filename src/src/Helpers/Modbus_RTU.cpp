@@ -1,9 +1,10 @@
 #include "Modbus_RTU.h"
 
-#include "../../ESPEasy_fdwdecl.h"
 
+#include "../ESPEasyCore/ESPEasy_Log.h"
 #include "ESPEasy_time_calc.h"
 #include "StringConverter.h"
+
 
 ModbusRTU_struct::ModbusRTU_struct() : easySerial(nullptr) {
   reset();
@@ -119,7 +120,7 @@ String ModbusRTU_struct::getDevice_description(byte slaveAddress) {
           result   = 0;
         }
 
-        if (result == 0) { label = F("S/N"); }
+        label = F("S/N");
         break;
       }
       case 0x83:
@@ -130,7 +131,7 @@ String ModbusRTU_struct::getDevice_description(byte slaveAddress) {
           result   = 0;
         }
 
-        if (result == 0) { label = F("Type"); }
+        label = F("Type");
         break;
       }
       default:

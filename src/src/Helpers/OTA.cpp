@@ -2,9 +2,12 @@
 
 #include <ArduinoOTA.h>
 
-#include "../../ESPEasy-Globals.h"
+
+#include "../ESPEasyCore/ESPEasy_Log.h"
+#include "../ESPEasyCore/Serial.h"
 #include "../Globals/SecuritySettings.h"
 #include "../Globals/Services.h"
+#include "../Globals/Settings.h"
 #include "../Helpers/Misc.h"
 
 bool OTA_possible(uint32_t& maxSketchSize, bool& use2step) {
@@ -44,7 +47,9 @@ bool OTA_possible(uint32_t& maxSketchSize, bool& use2step) {
  \*********************************************************************************************/
 void ArduinoOTAInit()
 {
+  #ifndef BUILD_NO_RAM_TRACKER
   checkRAM(F("ArduinoOTAInit"));
+  #endif
 
   ArduinoOTA.setPort(ARDUINO_OTA_PORT);
   ArduinoOTA.setHostname(Settings.getHostname().c_str());
@@ -85,7 +90,7 @@ void ArduinoOTAInit()
     else if (error == OTA_END_ERROR) { serialPrintln(F("End Failed")); }
 
     delay(100);
-    reboot();
+    reboot(ESPEasy_Scheduler::IntendedRebootReason_e::OTA_error);
   });
   ArduinoOTA.begin();
 

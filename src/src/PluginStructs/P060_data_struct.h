@@ -2,10 +2,7 @@
 #define PLUGINSTRUCTS_P060_DATA_STRUCT_H
 
 #include "../../_Plugin_Helper.h"
-#include "../../ESPEasy_common.h"
-
 #ifdef USES_P060
-
 
 struct P060_data_struct : public PluginTaskData_base {
 public:

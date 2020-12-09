@@ -1,4 +1,4 @@
-#include "_CPlugin_Helper.h"
+#include "src/Helpers/_CPlugin_Helper.h"
 #ifdef USES_C014
 
 #include "src/Globals/Device.h"
@@ -642,7 +642,7 @@ bool CPlugin_014(CPlugin::Function function, struct EventStruct *event, String& 
             if (command == F("event") || command == F("asyncevent"))
             {
               if (Settings.UseRules) {
-                String newEvent = parseStringToEnd(cmd, 2); 
+                String newEvent = parseStringToEnd(cmd, 2);
                 eventQueue.add(newEvent);
                 if (loglevelActiveFor(LOG_LEVEL_INFO)) {
                   log=F("C014 : taskIndex:");
@@ -652,7 +652,7 @@ bool CPlugin_014(CPlugin::Function function, struct EventStruct *event, String& 
                     log+=taskIndex;
                     log+=F(" valueNr:");
                     log+=valueNr;
-                    log+=F(" valueType:");                
+                    log+=F(" valueType:");
                     log+=Settings.TaskDevicePluginConfig[taskIndex][valueNr];
                   }
                   log+=F(" Event: ");
@@ -662,17 +662,21 @@ bool CPlugin_014(CPlugin::Function function, struct EventStruct *event, String& 
               }
             } else { // not an event
               if (loglevelActiveFor(LOG_LEVEL_INFO)) {
-                log=F("C014 : PluginCall:");
+                log=F("C014 :");
               }
               // FIXME TD-er: Command is not parsed, should we call ExecuteCommand here?
-              if (!PluginCall(PLUGIN_WRITE, &TempEvent, cmd)) {
-                remoteConfig(&TempEvent, cmd);
+              if (ExecuteCommand_internal(EventValueSource::Enum::VALUE_SOURCE_MQTT, cmd.c_str())) {
                 if (loglevelActiveFor(LOG_LEVEL_INFO)) {
-                  log +=F(" failed! remoteConfig?");
+                  log +=F(" Internal Command: OK!");
+                }
+              } else if (PluginCall(PLUGIN_WRITE, &TempEvent, cmd)) {
+                if (loglevelActiveFor(LOG_LEVEL_INFO)) {
+                  log +=F(" PluginCall: OK!");
                 }
               } else {
+                remoteConfig(&TempEvent, cmd);
                 if (loglevelActiveFor(LOG_LEVEL_INFO)) {
-                  log +=F(" OK!");
+                  log +=F(" Plugin/Internal command failed! remoteConfig?");
                 }
               }
               if (loglevelActiveFor(LOG_LEVEL_INFO)) {
@@ -696,7 +700,7 @@ bool CPlugin_014(CPlugin::Function function, struct EventStruct *event, String& 
         parseControllerVariables(pubname, event, false);
         LoadTaskSettings(event->TaskIndex);
 
-        String value = "";
+        String value;
         byte valueCount = getValueCountForTask(event->TaskIndex);
         for (byte x = 0; x < valueCount; x++)
         {
@@ -814,7 +818,7 @@ bool CPlugin_014(CPlugin::Function function, struct EventStruct *event, String& 
 
               if ((commandName == F("taskvalueset")) || (commandName == F("dummyvalueset"))) // should work for both
               {
-                valueStr = toString(UserVar[userVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[taskVarIndex]); //parseString(string, 4);
+                valueStr = formatUserVarNoCheck(event, taskVarIndex); //parseString(string, 4);
                 success = MQTTpublish(CPLUGIN_ID_014, topic.c_str(), valueStr.c_str(), false);
                 if (loglevelActiveFor(LOG_LEVEL_INFO) && success) {
                   String log = F("C014 : Acknowledged: ");
@@ -845,7 +849,7 @@ bool CPlugin_014(CPlugin::Function function, struct EventStruct *event, String& 
                     valueStr = toString(UserVar[userVarIndex],0);
                     break;
                   case 1: // PLUGIN_085_VALUE_FLOAT
-                    valueStr = toString(UserVar[userVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[taskVarIndex]);
+                    valueStr = formatUserVarNoCheck(event, taskVarIndex);
                     break;
                   case 2: // PLUGIN_085_VALUE_BOOLEAN
                     if ( UserVar[userVarIndex] == 1) valueStr="true";

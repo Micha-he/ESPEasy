@@ -1,3 +1,4 @@
+#include "_Plugin_Helper.h"
 #ifdef USES_P069
 
 // #######################################################################################################
@@ -17,8 +18,6 @@
 #define PLUGIN_NAME_069       "Environment - LM75A"
 #define PLUGIN_VALUENAME1_069 "Temperature"
 
-
-#include "_Plugin_Helper.h"
 
 #include "src/PluginStructs/P069_data_struct.h"
 
@@ -108,7 +107,7 @@ boolean Plugin_069(byte function, struct EventStruct *event, String& string)
       success                      = !isnan(tempC);
 
       if (loglevelActiveFor(LOG_LEVEL_INFO)) {
-        if (success) {
+        if (!success) {
           String log = F("LM75A: No reading!");
           addLog(LOG_LEVEL_INFO, log);
         }

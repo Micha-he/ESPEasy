@@ -1,12 +1,18 @@
 #include "../Commands/WiFi.h"
 
 #include "../../ESPEasy_common.h"
-#include "../Commands/Common.h"
-#include "../Globals/Settings.h"
-#include "../Helpers/StringConverter.h"
-#include "../../ESPEasyWifi.h"
 
-#include "../../ESPEasy_fdwdecl.h"
+#include "../Commands/Common.h"
+
+#include "../ESPEasyCore/ESPEasyWifi.h"
+#include "../ESPEasyCore/Serial.h"
+
+#include "../Globals/ESPEasyWiFiEvent.h"
+#include "../Globals/Settings.h"
+#include "../Globals/ESPEasyWiFiEvent.h"
+
+#include "../Helpers/StringConverter.h"
+
 
 #define WIFI_MODE_MAX (WiFiMode_t)4
 
@@ -55,7 +61,7 @@ String Command_Wifi_Scan(struct EventStruct *event, const char *Line)
 
 String Command_Wifi_Connect(struct EventStruct *event, const char *Line)
 {
-  wifiConnectAttemptNeeded = true;
+  WiFiEventData.wifiConnectAttemptNeeded = true;
   return return_command_success();
 }
 

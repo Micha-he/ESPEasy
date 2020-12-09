@@ -1,9 +1,9 @@
+#include "_Plugin_Helper.h"
 #ifdef USES_P029
 //#######################################################################################################
 //#################################### Plugin 029: Output ###############################################
 //#######################################################################################################
 
-#include "_Plugin_Helper.h"
 
 #define PLUGIN_029
 #define PLUGIN_ID_029         29
@@ -39,6 +39,7 @@ boolean Plugin_029(byte function, struct EventStruct *event, String& string)
     case PLUGIN_GET_DEVICEVALUENAMES:
       {
         strcpy_P(ExtraTaskSettings.TaskDeviceValueNames[0], PSTR(PLUGIN_VALUENAME1_029));
+        ExtraTaskSettings.TaskDeviceValueDecimals[0] = 0;
         break;
       }
 

@@ -1,6 +1,6 @@
 #include "ESPEasy_checks.h"
 
-#include "../../ESPEasy-Globals.h"
+
 #include "../../ESPEasy_common.h"
 
 #include "../DataStructs/C013_p2p_dataStructs.h"
@@ -15,6 +15,7 @@
 #include "../DataStructs/LogStruct.h"
 #include "../DataStructs/NodeStruct.h"
 #include "../DataStructs/NodeStruct.h"
+#include "../DataStructs/NotificationSettingsStruct.h"
 #include "../DataStructs/PortStatusStruct.h"
 #include "../DataStructs/ProtocolStruct.h"
 #include "../DataStructs/RTCStruct.h"
@@ -23,6 +24,7 @@
 #include "../DataStructs/SystemTimerStruct.h"
 
 #include "../Globals/ExtraTaskSettings.h"
+#include "../Globals/Settings.h"
 
 #include "../Helpers/ESPEasy_Storage.h"
 
@@ -88,7 +90,7 @@ void run_compiletime_checks() {
   check_size<NodeStruct,                            28u>();
   check_size<systemTimerStruct,                     24u>();
   check_size<RTCStruct,                             32u>();
-  check_size<portStatusStruct,                      4u>();
+  check_size<portStatusStruct,                      6u>();
   check_size<ResetFactoryDefaultPreference_struct,  4u>();
   check_size<GpioFactorySettingsStruct,             18u>();
   check_size<C013_SensorInfoStruct,                 137u>();

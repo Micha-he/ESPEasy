@@ -1,7 +1,8 @@
 #include "RamTracker.h"
 
-#include "../../ESPEasy_Log.h"
-#include "../../ESPEasy_fdwdecl.h"
+
+
+#include "../ESPEasyCore/ESPEasy_Log.h"
 
 #include "../Globals/Statistics.h"
 
@@ -137,6 +138,7 @@ void RamTracker::getTraceBuffer() {
 }
 
 #else // BUILD_NO_RAM_TRACKER
+/*
 
 void checkRAMtoLog(void) {}
 
@@ -147,5 +149,6 @@ void checkRAM(const String& flashString,
               const String& a) {}
 
 void checkRAM(const String& descr) {}
+*/
 
 #endif // BUILD_NO_RAM_TRACKER

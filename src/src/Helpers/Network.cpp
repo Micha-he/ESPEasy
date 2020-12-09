@@ -2,13 +2,15 @@
 
 #include <ArduinoOTA.h>
 
-#include "../../ESPEasyWifi.h"
-#include "../../ESPEasyNetwork.h"
 #include "../../ESPEasy_common.h"
+
+#include "../ESPEasyCore/ESPEasyWifi.h"
+#include "../ESPEasyCore/ESPEasyNetwork.h"
 
 #include "../Globals/Settings.h"
 
 #include "../Helpers/ESPEasy_time_calc.h"
+#include "../Helpers/Hardware.h"
 #include "../Helpers/Misc.h"
 
 /********************************************************************************************\
@@ -73,11 +75,6 @@ void statusLED(bool traffic)
       pwm = PWMRANGE_FULL - pwm;
     }
 
-    #if defined(ESP8266)
-    analogWrite(Settings.Pin_status_led, pwm);
-    #endif // if defined(ESP8266)
-    #if defined(ESP32)
-    analogWriteESP32(Settings.Pin_status_led, pwm);
-    #endif // if defined(ESP32)
+    set_Gpio_PWM(Settings.Pin_status_led, pwm, 1000);
   }
 }

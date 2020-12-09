@@ -1,4 +1,4 @@
-#include "_CPlugin_Helper.h"
+#include "src/Helpers/_CPlugin_Helper.h"
 #ifdef USES_C004
 //#######################################################################################################
 //########################### Controller Plugin 004: ThingSpeak #########################################
@@ -108,7 +108,7 @@ bool do_process_c004_delay_queue(int controller_number, const C004_queue_element
     {
       postDataStr += F("&field");
       postDataStr += element.idx + x;
-      postDataStr += "=";
+      postDataStr += '=';
       postDataStr += formatUserVarNoCheck(element.TaskIndex, x);
     }
   }

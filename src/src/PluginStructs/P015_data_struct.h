@@ -2,9 +2,8 @@
 #define PLUGINSTRUCTS_P015_DATA_STRUCT_H
 
 #include "../../_Plugin_Helper.h"
-#include "../../ESPEasy_common.h"
-
 #ifdef USES_P015
+
 
 # define TSL2561_ADDR_0 0x29 // address with '0' shorted on board
 # define TSL2561_ADDR   0x39 // default address
@@ -120,9 +119,9 @@ struct P015_data_struct : public PluginTaskData_base {
               float         ms,
               unsigned int  CH0,
               unsigned int  CH1,
-              double      & lux,
-              double      & infrared,
-              double      & broadband);
+              float       & lux,
+              float       & infrared,
+              float       & broadband);
 
 
   unsigned int _gain; // Gain setting, 0 = X1, 1 = X16, 2 = auto, 3 = extended auto;

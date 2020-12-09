@@ -2,13 +2,13 @@
 #define CONTROLLERQUEUE_C015_QUEUE_ELEMENT_H
 
 #include "../../ESPEasy_common.h"
-#include "../DataStructs/ESPEasyLimits.h"
+#include "../CustomBuild/ESPEasyLimits.h"
 #include "../Globals/CPlugins.h"
 #include "../Globals/Plugins.h"
 
 struct EventStruct;
 
-// #ifdef USES_C015
+#ifdef USES_C015
 
 /*********************************************************************************************\
 * C015_queue_element for queueing requests for 015: Blynk
@@ -36,7 +36,7 @@ public:
   byte valueCount                  = 0;
 };
 
-// #endif //USES_C015
+#endif //USES_C015
 
 
 #endif // CONTROLLERQUEUE_C015_QUEUE_ELEMENT_H

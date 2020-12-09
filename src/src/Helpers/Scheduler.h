@@ -1,8 +1,11 @@
 #ifndef HELPERS_SCHEDULER_H
 #define HELPERS_SCHEDULER_H
 
+#include "../../ESPEasy_common.h"
+
 #include "../DataStructs/EventStructCommandWrapper.h"
 #include "../DataStructs/SystemTimerStruct.h"
+#include "../DataTypes/ProtocolIndex.h"
 #include "../Helpers/msecTimerHandlerStruct.h"
 
 #include <list>
@@ -52,12 +55,31 @@ public:
 
   };
 
+  static String toString(IntervalTimer_e timer);
+
   enum class PluginPtrType {
     TaskPlugin,
     ControllerPlugin,
     NotificationPlugin
   };
 
+  enum class IntendedRebootReason_e {
+    DeepSleep,
+    DelayedReboot,
+    ResetFactory,
+    ResetFactoryPinActive,
+    ResetFactoryCommand,
+    CommandReboot,
+    RestoreSettings,
+    OTA_error,
+    ConnectionFailuresThreshold,
+
+  };
+
+  static String toString(IntendedRebootReason_e reason);
+
+
+  void markIntendedReboot(IntendedRebootReason_e reason);
 
   /*********************************************************************************************\
   * Generic Timer functions.
@@ -164,15 +186,18 @@ public:
   * GPIO Timer
   * Special timer to handle timed GPIO actions
   \*********************************************************************************************/
-  static unsigned long createGPIOTimerId(byte pinNumber,
+  static unsigned long createGPIOTimerId(byte GPIOType,
+                                         byte pinNumber,
                                          int  Par1);
 
-  void                 setGPIOTimer(unsigned long msecFromNow,
-                                    int           Par1,
-                                    int           Par2 = 0,
-                                    int           Par3 = 0,
-                                    int           Par4 = 0,
-                                    int           Par5 = 0);
+
+  void setGPIOTimer(unsigned long msecFromNow,
+                    pluginID_t    pluginID,
+                    int           Par1,
+                    int           Par2 = 0,
+                    int           Par3 = 0,
+                    int           Par4 = 0,
+                    int           Par5 = 0);
 
   void process_gpio_timer(unsigned long id);
 
@@ -188,8 +213,13 @@ public:
   // Typical use case is to run this when all needed connections are made.
   void schedule_all_task_device_timers();
 
+  // Schedule a call to SensorSendTask, which calls PLUGIN_READ
   void schedule_task_device_timer(unsigned long task_index,
                                   unsigned long runAt);
+
+  // Reschedule task device timer based on the set task interval.
+  void reschedule_task_device_timer(unsigned long task_index,
+                                    unsigned long lasttimer);
 
   void process_task_device_timer(unsigned long task_index,
                                  unsigned long lasttimer);
@@ -203,6 +233,14 @@ public:
   void schedule_plugin_task_event_timer(deviceIndex_t       DeviceIndex,
                                         byte                Function,
                                         struct EventStruct *event);
+
+  void schedule_mqtt_plugin_import_event_timer(deviceIndex_t   DeviceIndex,
+                                               taskIndex_t     TaskIndex,
+                                               byte            Function,
+                                               char           *c_topic,
+                                               byte           *b_payload,
+                                               unsigned int    length);
+
 
   void schedule_controller_event_timer(protocolIndex_t     ProtocolIndex,
                                        byte                Function,

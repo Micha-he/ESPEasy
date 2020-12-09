@@ -1,4 +1,4 @@
-#include "_CPlugin_Helper.h"
+#include "src/Helpers/_CPlugin_Helper.h"
 
 #ifdef USES_C018
 
@@ -14,12 +14,17 @@
 
 # include <rn2xx3.h>
 # include <ESPeasySerial.h>
-# include "ESPEasy_fdwdecl.h"
 
 # include "src/ControllerQueue/C018_queue_element.h"
-# include "src/DataStructs/ESPEasy_plugin_functions.h"
+# include "src/DataTypes/ESPEasy_plugin_functions.h"
 # include "src/Globals/CPlugins.h"
 # include "src/Globals/Protocol.h"
+# include "src/Helpers/_Plugin_Helper_serial.h"
+# include "src/Helpers/StringGenerator_GPIO.h"
+# include "src/WebServer/Markup.h"
+# include "src/WebServer/Markup_Forms.h"
+# include "src/WebServer/HTML_wrappers.h"
+
 
 // Have this define after the includes, so we can set it in Custom.h
 # ifndef C018_FORCE_SW_SERIAL
@@ -103,6 +108,10 @@ struct C018_data_struct {
 
     C018_logError(F("useOTA()"));
     return res;
+  }
+
+  bool command_finished() const {
+    return myLora->command_finished();
   }
 
   bool txUncnfBytes(const byte *data, uint8_t size, uint8_t port) {
@@ -268,9 +277,9 @@ struct C018_data_struct {
     return sampleSetCounter;
   }
 
-  float getLoRaAirTime(uint8_t  pl) const {
+  float getLoRaAirTime(uint8_t pl) const {
     if (isInitialized()) {
-      return myLora->getLoRaAirTime(pl);
+      return myLora->getLoRaAirTime(pl + 13); // We have a LoRaWAN header of 13 bytes.
     }
     return -1.0;
   }
@@ -278,6 +287,7 @@ struct C018_data_struct {
   void async_loop() {
     if (isInitialized()) {
       rn2xx3_handler::RN_state state = myLora->async_loop();
+
       if (rn2xx3_handler::RN_state::must_perform_init == state) {
         if (myLora->get_busy_count() > 10) {
           if (_resetPin != -1) {
@@ -288,7 +298,8 @@ struct C018_data_struct {
             delay(200);
           }
           autobaud_success = false;
-//          triggerAutobaud();
+
+          //          triggerAutobaud();
         }
       }
     }
@@ -385,8 +396,9 @@ private:
   taskIndex_t    sampleSetInitiator = INVALID_TASK_INDEX;
   int8_t         _resetPin          = -1;
   bool           autobaud_success   = false;
-} C018_data;
+};
 
+C018_data_struct *C018_data = nullptr;
 
 # define C018_DEVICE_EUI_LEN          17
 # define C018_DEVICE_ADDR_LEN         33
@@ -470,10 +482,10 @@ bool CPlugin_018(CPlugin::Function function, struct EventStruct *event, String& 
 
     case CPlugin::Function::CPLUGIN_WEBFORM_SHOW_HOST_CONFIG:
     {
-      if (C018_data.isInitialized()) {
+      if (C018_data != nullptr && C018_data->isInitialized()) {
         string  = F("Dev addr: ");
-        string += C018_data.getDevaddr();
-        string += C018_data.useOTAA() ? F(" (OTAA)") : F(" (ABP)");
+        string += C018_data->getDevaddr();
+        string += C018_data->useOTAA() ? F(" (OTAA)") : F(" (ABP)");
       } else {
         string = F("-");
       }
@@ -492,14 +504,17 @@ bool CPlugin_018(CPlugin::Function function, struct EventStruct *event, String& 
 
     case CPlugin::Function::CPLUGIN_EXIT:
     {
-      C018_data.reset();
+      if (C018_data != nullptr) {
+        C018_data->reset();
+        delete C018_data;
+        C018_data = nullptr;
+      }
       exit_c018_delay_queue();
       break;
     }
 
     case CPlugin::Function::CPLUGIN_WEBFORM_LOAD:
     {
-      addTableSeparator(F("Credentials"), 2, 3);
       {
         // Script to toggle visibility of OTAA/ABP field, based on the activation method selector.
         protocolIndex_t ProtocolIndex = getProtocolIndex_from_ControllerIndex(event->ControllerIndex);
@@ -545,7 +560,8 @@ bool CPlugin_018(CPlugin::Function function, struct EventStruct *event, String& 
         {
           addFormTextBox(F("Device EUI"), F("deveui"), customConfig->DeviceEUI, C018_DEVICE_EUI_LEN - 1);
           String deveui_note = F("Leave empty to use HW DevEUI: ");
-          deveui_note += C018_data.hweui();
+          if (C018_data != nullptr)
+            deveui_note += C018_data->hweui();
           addFormNote(deveui_note, F("deveui_note"));
         }
 
@@ -597,45 +613,47 @@ bool CPlugin_018(CPlugin::Function function, struct EventStruct *event, String& 
 
       addTableSeparator(F("Device Status"), 2, 3);
 
-      // Some information on detected device
-      addRowLabel(F("Hardware DevEUI"));
-      addHtml(String(C018_data.hweui()));
-      addRowLabel(F("Version Number"));
-      addHtml(String(C018_data.sysver()));
+      if (C018_data != nullptr) {
+        // Some information on detected device
+        addRowLabel(F("Hardware DevEUI"));
+        addHtml(String(C018_data->hweui()));
+        addRowLabel(F("Version Number"));
+        addHtml(String(C018_data->sysver()));
 
-      addRowLabel(F("Voltage"));
-      addHtml(String(static_cast<float>(C018_data.getVbat()) / 1000.0, 3));
+        addRowLabel(F("Voltage"));
+        addHtml(String(static_cast<float>(C018_data->getVbat()) / 1000.0, 3));
 
-      addRowLabel(F("Dev Addr"));
-      addHtml(C018_data.getDevaddr());
+        addRowLabel(F("Dev Addr"));
+        addHtml(C018_data->getDevaddr());
 
-      uint32_t dnctr, upctr;
+        uint32_t dnctr, upctr;
 
-      if (C018_data.getFrameCounters(dnctr, upctr)) {
-        addRowLabel(F("Frame Counters (down/up)"));
-        String values = String(dnctr);
-        values += '/';
-        values += upctr;
-        addHtml(values);
-      }
+        if (C018_data->getFrameCounters(dnctr, upctr)) {
+          addRowLabel(F("Frame Counters (down/up)"));
+          String values = String(dnctr);
+          values += '/';
+          values += upctr;
+          addHtml(values);
+        }
 
-      addRowLabel(F("Last Command Error"));
-      addHtml(C018_data.getLastError());
+        addRowLabel(F("Last Command Error"));
+        addHtml(C018_data->getLastError());
 
-      addRowLabel(F("Sample Set Counter"));
-      addHtml(String(C018_data.getSampleSetCount()));
+        addRowLabel(F("Sample Set Counter"));
+        addHtml(String(C018_data->getSampleSetCount()));
 
-      {
-        RN2xx3_status status = C018_data.getStatus();
+        {
+          RN2xx3_status status = C018_data->getStatus();
 
-        addRowLabel(F("Status RAW value"));
-        addHtml(String(status.getRawStatus()));
+          addRowLabel(F("Status RAW value"));
+          addHtml(String(status.getRawStatus()));
 
-        addRowLabel(F("Activation Status"));
-        addHtml(String(status.Joined));
+          addRowLabel(F("Activation Status"));
+          addHtml(String(status.Joined));
 
-        addRowLabel(F("Silent Immediately"));
-        addHtml(String(status.SilentImmediately));
+          addRowLabel(F("Silent Immediately"));
+          addHtml(String(status.SilentImmediately));
+        }
       }
 
 
@@ -698,16 +716,17 @@ bool CPlugin_018(CPlugin::Function function, struct EventStruct *event, String& 
       if (C018_DelayHandler == nullptr) {
         break;
       }
+      if (C018_data != nullptr) {
+        success = C018_DelayHandler->addToQueue(
+          C018_queue_element(event, C018_data->getSampleSetCount(event->TaskIndex)));
+        Scheduler.scheduleNextDelayQueue(ESPEasy_Scheduler::IntervalTimer_e::TIMER_C018_DELAY_QUEUE, C018_DelayHandler->getNextScheduleTime());
 
-      success = C018_DelayHandler->addToQueue(
-        C018_queue_element(event, C018_data.getSampleSetCount(event->TaskIndex)));
-      Scheduler.scheduleNextDelayQueue(ESPEasy_Scheduler::IntervalTimer_e::TIMER_C018_DELAY_QUEUE, C018_DelayHandler->getNextScheduleTime());
-
-      if (!C018_data.isInitialized()) {
-        // Sometimes the module does need some time after power on to respond.
-        // So it may not be initialized well at the call of CPLUGIN_INIT
-        // We try to trigger its init again when sending data.
-        C018_init(event);
+        if (!C018_data->isInitialized()) {
+          // Sometimes the module does need some time after power on to respond.
+          // So it may not be initialized well at the call of CPLUGIN_INIT
+          // We try to trigger its init again when sending data.
+          C018_init(event);
+        }
       }
       break;
     }
@@ -722,7 +741,8 @@ bool CPlugin_018(CPlugin::Function function, struct EventStruct *event, String& 
 
     case CPlugin::Function::CPLUGIN_FIFTY_PER_SECOND:
     {
-      C018_data.async_loop();
+      if (C018_data != nullptr)
+        C018_data->async_loop();
 
       // FIXME TD-er: Handle reading error state or return values.
       break;
@@ -746,6 +766,12 @@ bool C018_init(struct EventStruct *event) {
   String AppKey;
   taskIndex_t  SampleSetInitiator = INVALID_TASK_INDEX;
   unsigned int Port               = 0;
+  if (C018_data == nullptr) {
+    C018_data = new (std::nothrow) C018_data_struct;
+    if (C018_data == nullptr) {
+      return false;
+    }
+  }
   {
     // Allocate ControllerSettings object in a scope, so we can destruct it as soon as possible.
     MakeControllerSettings(ControllerSettings);
@@ -756,10 +782,10 @@ bool C018_init(struct EventStruct *event) {
 
     LoadControllerSettings(event->ControllerIndex, ControllerSettings);
     C018_DelayHandler->configureControllerSettings(ControllerSettings);
-    AppEUI = getControllerUser(event->ControllerIndex, ControllerSettings);
-    AppKey = getControllerPass(event->ControllerIndex, ControllerSettings);
+    AppEUI             = getControllerUser(event->ControllerIndex, ControllerSettings);
+    AppKey             = getControllerPass(event->ControllerIndex, ControllerSettings);
     SampleSetInitiator = ControllerSettings.SampleSetInitiator;
-    Port = ControllerSettings.Port;
+    Port               = ControllerSettings.Port;
   }
 
   std::shared_ptr<C018_ConfigStruct> customConfig(new C018_ConfigStruct);
@@ -770,14 +796,14 @@ bool C018_init(struct EventStruct *event) {
   LoadCustomControllerSettings(event->ControllerIndex, (byte *)customConfig.get(), sizeof(C018_ConfigStruct));
   customConfig->validate();
 
-  if (!C018_data.init(customConfig->serialPort, customConfig->rxpin, customConfig->txpin, customConfig->baudrate,
+  if (!C018_data->init(customConfig->serialPort, customConfig->rxpin, customConfig->txpin, customConfig->baudrate,
                       (customConfig->joinmethod == C018_USE_OTAA),
                       SampleSetInitiator, customConfig->resetpin))
   {
     return false;
   }
 
-  C018_data.setFrequencyPlan(static_cast<RN2xx3_datatypes::Freq_plan>(customConfig->frequencyplan));
+  C018_data->setFrequencyPlan(static_cast<RN2xx3_datatypes::Freq_plan>(customConfig->frequencyplan));
 
   if (customConfig->joinmethod == C018_USE_OTAA) {
     String log = F("OTAA: AppEUI: ");
@@ -789,21 +815,21 @@ bool C018_init(struct EventStruct *event) {
 
     addLog(LOG_LEVEL_INFO, log);
 
-    if (!C018_data.initOTAA(AppEUI, AppKey, customConfig->DeviceEUI)) {
+    if (!C018_data->initOTAA(AppEUI, AppKey, customConfig->DeviceEUI)) {
       return false;
     }
   }
   else {
-    if (!C018_data.initABP(customConfig->DeviceAddr, customConfig->AppSessionKey, customConfig->NetworkSessionKey)) {
+    if (!C018_data->initABP(customConfig->DeviceAddr, customConfig->AppSessionKey, customConfig->NetworkSessionKey)) {
       return false;
     }
   }
 
-  if (!C018_data.setSF(customConfig->sf)) {
+  if (!C018_data->setSF(customConfig->sf)) {
     return false;
   }
 
-  if (!C018_data.txUncnf("ESPeasy (TTN)", Port)) {
+  if (!C018_data->txUncnf("ESPeasy (TTN)", Port)) {
     return false;
   }
   return true;
@@ -815,23 +841,36 @@ bool do_process_c018_delay_queue(int controller_number, const C018_queue_element
 // *INDENT-ON*
 
 bool do_process_c018_delay_queue(int controller_number, const C018_queue_element& element, ControllerSettingsStruct& ControllerSettings) {
-  bool   success = C018_data.txHexBytes(element.packed, ControllerSettings.Port);
-  if (success) {
-    uint8_t pl = (element.packed.length() / 2) + 13; // We have a LoRaWAN header of 13 bytes.
-    float airtime_ms = C018_data.getLoRaAirTime(pl);
-    if (airtime_ms > 0.0) {      
-      ADD_TIMER_STAT(C018_AIR_TIME, static_cast<unsigned long>(airtime_ms * 1000));
-      if (loglevelActiveFor(LOG_LEVEL_INFO)) {
-        String log = F("LoRaWAN : Payload Length: ");
-        log += pl;
-        log += F(" Air Time: ");
-        log += String(airtime_ms, 3);
-        log += F(" ms");
-        addLog(LOG_LEVEL_INFO, log);
+  uint8_t pl           = (element.packed.length() / 2);
+  float   airtime_ms   = C018_data->getLoRaAirTime(pl);
+  bool    mustSetDelay = false;
+  bool    success      = false;
+
+  if (!C018_data->command_finished()) {
+    mustSetDelay = true;
+  } else {
+    success = C018_data->txHexBytes(element.packed, ControllerSettings.Port);
+
+    if (success) {
+      if (airtime_ms > 0.0) {
+        ADD_TIMER_STAT(C018_AIR_TIME, static_cast<unsigned long>(airtime_ms * 1000));
+
+        if (loglevelActiveFor(LOG_LEVEL_INFO)) {
+          String log = F("LoRaWAN : Payload Length: ");
+          log += pl + 13; // We have a LoRaWAN header of 13 bytes.
+          log += F(" Air Time: ");
+          log += String(airtime_ms, 3);
+          log += F(" ms");
+          addLog(LOG_LEVEL_INFO, log);
+        }
       }
     }
   }
-  String error   = C018_data.getLastError(); // Clear the error string.
+  String error = C018_data->getLastError(); // Clear the error string.
+
+  if (error.indexOf(F("no_free_ch")) != -1) {
+    mustSetDelay = true;
+  }
 
   if (loglevelActiveFor(LOG_LEVEL_INFO)) {
     String log = F("C018 : Sent: ");
@@ -845,6 +884,21 @@ bool do_process_c018_delay_queue(int controller_number, const C018_queue_element
     log += error;
     addLog(LOG_LEVEL_INFO, log);
   }
+
+  if (mustSetDelay) {
+    // Module is still sending, delay for 10x expected air time, which is equivalent of 10% air time duty cycle.
+    // This can be retried a few times, so at most 10 retries like these are needed to get below 1% air time again.
+    // Very likely only 2 - 3 of these delays are needed, as we have 8 channels to send from and messages are likely sent in bursts.
+    C018_DelayHandler->setAdditionalDelay(10 * airtime_ms);
+
+    if (loglevelActiveFor(LOG_LEVEL_INFO)) {
+      String log = F("LoRaWAN : Unable to send. Delay for ");
+      log += 10 * airtime_ms;
+      log += F(" ms");
+      addLog(LOG_LEVEL_INFO, log);
+    }
+  }
+
   return success;
 }
 

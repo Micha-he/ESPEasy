@@ -1,26 +1,42 @@
 #include "PeriodicalActions.h"
 
-
-#include "../../ESPEasyWifi.h"
-#include "../../ESPEasy_Log.h"
 #include "../../ESPEasy_common.h"
+#include "../../ESPEasy_fdwdecl.h"
+#include "../../ESPEasy-Globals.h"
+
 #include "../ControllerQueue/DelayQueueElements.h"
 #include "../ControllerQueue/MQTT_queue_element.h"
-#include "../DataStructs/ESPEasy_plugin_functions.h"
 #include "../DataStructs/TimingStats.h"
+#include "../DataTypes/ESPEasy_plugin_functions.h"
+#include "../ESPEasyCore/Controller.h"
+#include "../ESPEasyCore/ESPEasyGPIO.h"
+#include "../ESPEasyCore/ESPEasy_Log.h"
+#include "../ESPEasyCore/ESPEasyNetwork.h"
+#include "../ESPEasyCore/ESPEasyWifi.h"
+#include "../ESPEasyCore/ESPEasyRules.h"
+#include "../ESPEasyCore/Serial.h"
+#include "../Globals/ESPEasyWiFiEvent.h"
 #include "../Globals/ESPEasy_Scheduler.h"
+#include "../Globals/ESPEasy_time.h"
 #include "../Globals/EventQueue.h"
+#include "../Globals/MainLoopCommand.h"
 #include "../Globals/MQTT.h"
 #include "../Globals/NetworkState.h"
 #include "../Globals/RTC.h"
 #include "../Globals/SecuritySettings.h"
 #include "../Globals/Services.h"
+#include "../Globals/Settings.h"
 #include "../Globals/Statistics.h"
 #include "../Helpers/ESPEasyRTC.h"
 #include "../Helpers/Hardware.h"
 #include "../Helpers/Memory.h"
 #include "../Helpers/Misc.h"
+#include "../Helpers/Networking.h"
 #include "../Helpers/StringGenerator_System.h"
+#include "../Helpers/StringProvider.h"
+
+
+#define PLUGIN_ID_MQTT_IMPORT         37
 
 
 /*********************************************************************************************\
@@ -46,6 +62,12 @@ void run50TimesPerSecond() {
 \*********************************************************************************************/
 void run10TimesPerSecond() {
   String dummy;
+  //@giig19767g: WARNING: Monitor10xSec must run before PLUGIN_TEN_PER_SECOND
+  {
+    START_TIMER;
+    GPIO_Monitor10xSec();
+    STOP_TIMER(PLUGIN_CALL_10PSU);
+  }
   {
     START_TIMER;
     PluginCall(PLUGIN_TEN_PER_SECOND, 0, dummy);
@@ -91,8 +113,8 @@ void runOncePerSecond()
   }
 
   if (Settings.ConnectionFailuresThreshold)
-    if (connectionFailures > Settings.ConnectionFailuresThreshold)
-      delayedReboot(60);
+    if (WiFiEventData.connectionFailures > Settings.ConnectionFailuresThreshold)
+      delayedReboot(60, ESPEasy_Scheduler::IntendedRebootReason_e::DelayedReboot);
 
   if (cmd_within_mainloop != 0)
   {
@@ -105,7 +127,7 @@ void runOncePerSecond()
         }
       case CMD_REBOOT:
         {
-          reboot();
+          reboot(ESPEasy_Scheduler::IntendedRebootReason_e::CommandReboot);
           break;
         }
     }
@@ -169,7 +191,9 @@ void runOncePerSecond()
 \*********************************************************************************************/
 void runEach30Seconds()
 {
+  #ifndef BUILD_NO_RAM_TRACKER
   checkRAMtoLog();
+  #endif
   wdcounter++;
   if (loglevelActiveFor(LOG_LEVEL_INFO)) {
     String log;
@@ -177,7 +201,7 @@ void runEach30Seconds()
     log = F("WD   : Uptime ");
     log += wdcounter / 2;
     log += F(" ConnectFailures ");
-    log += connectionFailures;
+    log += WiFiEventData.connectionFailures;
     log += F(" FreeMem ");
     log += FreeMem();
     #ifdef HAS_ETHERNET
@@ -213,7 +237,7 @@ void runEach30Seconds()
   #endif // USES_SSDP
   #endif
 #if FEATURE_ADC_VCC
-  if (!wifiConnectInProgress) {
+  if (!WiFiEventData.wifiConnectInProgress) {
     vcc = ESP.getVcc() / 1000.0f;
   }
 #endif
@@ -236,6 +260,18 @@ void schedule_all_tasks_using_MQTT_controller() {
 
   if (!validControllerIndex(ControllerIndex)) { return; }
 
+  deviceIndex_t DeviceIndex = getDeviceIndex(PLUGIN_ID_MQTT_IMPORT); // Check if P037_MQTTimport is present in the build
+  if (validDeviceIndex(DeviceIndex)) {
+    for (taskIndex_t task = 0; task < TASKS_MAX; task++) {
+      if (Settings.TaskDeviceNumber[task] == PLUGIN_ID_MQTT_IMPORT) {
+        // Schedule a call to each MQTT import plugin to notify the broker connection state
+        EventStruct event(task);
+        event.Par1 = MQTTclient_connected ? 1 : 0;
+        Scheduler.schedule_plugin_task_event_timer(DeviceIndex, PLUGIN_MQTT_CONNECTION_STATE, &event);
+      }
+    }
+  }
+
   for (taskIndex_t task = 0; task < TASKS_MAX; task++) {
     if (Settings.TaskDeviceSendData[ControllerIndex][task] &&
         Settings.ControllerEnabled[ControllerIndex] &&
@@ -247,7 +283,7 @@ void schedule_all_tasks_using_MQTT_controller() {
 }
 
 void processMQTTdelayQueue() {
-  if (MQTTDelayHandler == nullptr) {
+  if (MQTTDelayHandler == nullptr || !MQTTclient_connected) {
     return;
   }
 
@@ -257,8 +293,8 @@ void processMQTTdelayQueue() {
   if (element == NULL) { return; }
 
   if (MQTTclient.publish(element->_topic.c_str(), element->_payload.c_str(), element->_retained)) {
-    if (connectionFailures > 0) {
-      --connectionFailures;
+    if (WiFiEventData.connectionFailures > 0) {
+      --WiFiEventData.connectionFailures;
     }
     MQTTDelayHandler->markProcessed(true);
   } else {
@@ -289,6 +325,7 @@ void updateMQTTclient_connected() {
       }
       MQTTclient_must_send_LWT_connected = false;
     } else {
+      // Now schedule all tasks using the MQTT controller.
       schedule_all_tasks_using_MQTT_controller();
     }
     if (Settings.UseRules) {
@@ -394,7 +431,7 @@ void updateLoopStats_30sec(byte loglevel) {
 /********************************************************************************************\
    Clean up all before going to sleep or reboot.
  \*********************************************************************************************/
-void prepareShutdown()
+void prepareShutdown(ESPEasy_Scheduler::IntendedRebootReason_e reason)
 {
 #ifdef USES_MQTT
   runPeriodicalMQTT(); // Flush outstanding MQTT messages
@@ -405,6 +442,7 @@ void prepareShutdown()
   ESPEASY_FS.end();
   delay(100); // give the node time to flush all before reboot or sleep
   node_time.now();
+  Scheduler.markIntendedReboot(reason);
   saveToRTC();
 }
 

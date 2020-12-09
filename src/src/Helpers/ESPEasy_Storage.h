@@ -4,9 +4,11 @@
 #include <FS.h>
 
 
-#include "../DataStructs/SettingsType.h"
+#include "../DataTypes/SettingsType.h"
 #include "../Globals/Plugins.h"
 #include "../Globals/CPlugins.h"
+
+#include "../../ESPEasy_common.h"
 
 /********************************************************************************************\
    file system error handling
@@ -171,6 +173,9 @@ String LoadNotificationSettings(int NotificationIndex, byte *memAddress, int dat
    Init a file with zeros on file system
  \*********************************************************************************************/
 String InitFile(const String& fname, int datasize);
+
+String InitFile(SettingsType::Enum settingsType);
+String InitFile(SettingsType::SettingsFileEnum file_type);
 
 /********************************************************************************************\
    Save data into config file on file system

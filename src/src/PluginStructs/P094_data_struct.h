@@ -1,12 +1,11 @@
 #ifndef PLUGINSTRUCTS_P094_DATA_STRUCT_H
 #define PLUGINSTRUCTS_P094_DATA_STRUCT_H
 
-#include <ESPeasySerial.h>
 #include "../../_Plugin_Helper.h"
-#include "../../ESPEasy_common.h"
-
 #ifdef USES_P094
-# include <Regexp.h>
+
+#include <ESPeasySerial.h>
+#include <Regexp.h>
 
 
 # define P094_REGEX_POS             0

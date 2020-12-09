@@ -1,4 +1,6 @@
-#include "P092_data_struct.h"
+#include "../PluginStructs/P092_data_struct.h"
+
+#ifdef USES_P092
 
 //
 // DLBus reads and decodes the DL-Bus.
@@ -431,3 +433,5 @@ boolean DLBus::CheckCRC(uint8_t IdxCRC) {
   }
   return false;
 }
+
+#endif
