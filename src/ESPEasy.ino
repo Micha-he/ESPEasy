@@ -119,10 +119,10 @@
 #include "src/ESPEasyCore/ESPEasyNetwork.h"
 #include "src/ESPEasyCore/ESPEasyRules.h"
 #include "src/ESPEasyCore/ESPEasyWifi.h"
-#include "src/ESPEasyCore/ESPEasyWiFi_credentials.h"
 #include "src/ESPEasyCore/ESPEasyWifi_ProcessEvent.h"
 #include "src/ESPEasyCore/Serial.h"
 
+#include "src/Globals/Cache.h"
 #include "src/Globals/CPlugins.h"
 #include "src/Globals/Device.h"
 #include "src/Globals/ESPEasyWiFiEvent.h"
@@ -141,6 +141,7 @@
 #include "src/Globals/Services.h"
 #include "src/Globals/Settings.h"
 #include "src/Globals/Statistics.h"
+#include "src/Globals/WiFi_AP_Candidates.h"
 
 #include "src/Helpers/DeepSleep.h"
 #include "src/Helpers/ESPEasyRTC.h"
@@ -158,6 +159,10 @@
 #include "src/Helpers/StringGenerator_System.h"
 
 #include "src/WebServer/WebServer.h"
+
+#ifdef PHASE_LOCKED_WAVEFORM
+#include <core_esp8266_waveform.h>
+#endif
 
 #if FEATURE_ADC_VCC
 ADC_MODE(ADC_VCC);
@@ -178,6 +183,8 @@ void preinit() {
   // No global object methods or C++ exceptions can be called in here!
   //The below is a static class method, which is similar to a function, so it's ok.
   ESP8266WiFiClass::preinitWiFiOff();
+  system_phy_set_powerup_option(RF_NO_CAL);
+
 }
 #endif
 
@@ -200,6 +207,9 @@ void setup()
 {
 #ifdef ESP8266_DISABLE_EXTRA4K
   disable_extra4k_at_link_time();
+#endif
+#ifdef PHASE_LOCKED_WAVEFORM
+  enablePhaseLockedWaveform();
 #endif
   initWiFi();
   
@@ -274,10 +284,12 @@ void setup()
     }
 
     log += RTC.bootCounter;
+    #ifndef BUILD_NO_DEBUG
     log += F(" Last Action before Reboot: ");
     log += ESPEasy_Scheduler::decodeSchedulerId(lastMixedSchedulerId_beforereboot);
     log += F(" Last systime: ");
     log += RTC.lastSysTime;
+    #endif
   }
   //cold boot (RTC memory empty)
   else
@@ -316,15 +328,6 @@ void setup()
 //  progMemMD5check();
   LoadSettings();
 
-  #ifdef HAS_ETHERNET
-  // This ensures, that changing WIFI OR ETHERNET MODE happens properly only after reboot. Changing without reboot would not be a good idea.
-  // This only works after LoadSettings();
-  active_network_medium = Settings.NetworkMedium;
-  log = F("INIT : ETH_WIFI_MODE:");
-  log += toString(active_network_medium);
-  addLog(LOG_LEVEL_INFO, log);
-  #endif
-
   Settings.UseRTOSMultitasking = false; // For now, disable it, we experience heap corruption.
   if (RTC.bootFailedCount > 10 && RTC.bootCounter > 10) {
     byte toDisable = RTC.bootFailedCount - 10;
@@ -336,12 +339,19 @@ void setup()
       toDisable = disableNotification(toDisable);
     }
   }
-  if (!selectValidWiFiSettings()) {
-    WiFiEventData.wifiSetup = true;
-    RTC.lastWiFiChannel = 0; // Must scan all channels
-    // Wait until scan has finished to make sure as many as possible are found
-    // We're still in the setup phase, so nothing else is taking resources of the ESP.
-    WifiScan(false, false); 
+  #ifdef HAS_ETHERNET
+  // This ensures, that changing WIFI OR ETHERNET MODE happens properly only after reboot. Changing without reboot would not be a good idea.
+  // This only works after LoadSettings();
+  setNetworkMedium(Settings.NetworkMedium);
+  #endif
+  if (active_network_medium == NetworkMedium_t::WIFI) {
+    if (!WiFi_AP_Candidates.hasKnownCredentials()) {
+      WiFiEventData.wifiSetup = true;
+      RTC.clearLastWiFi(); // Must scan all channels
+      // Wait until scan has finished to make sure as many as possible are found
+      // We're still in the setup phase, so nothing else is taking resources of the ESP.
+      WifiScan(false); 
+    }
   }
 
 //  setWifiMode(WIFI_STA);
@@ -361,16 +371,11 @@ void setup()
     ResetFactory();
   }
 
-  if (Settings.UseSerial)
-  {
-    //make sure previous serial buffers are flushed before resetting baudrate
-    Serial.flush();
-    Serial.begin(Settings.BaudRate);
-//    Serial.setDebugOutput(true);
-  }
+  initSerial();
 
-  if (Settings.Build != BUILD)
+  if (Settings.Build != BUILD) {
     BuildFixes();
+  }
 
 
   log = F("INIT : Free RAM:");
@@ -402,8 +407,10 @@ void setup()
   addLog(LOG_LEVEL_INFO, log);
 
   if (deviceCount + 1 >= PLUGIN_MAX) {
-    addLog(LOG_LEVEL_ERROR, F("Programming error! - Increase PLUGIN_MAX"));
+    addLog(LOG_LEVEL_ERROR, String(F("Programming error! - Increase PLUGIN_MAX (")) + deviceCount + ')');
   }
+
+  clearAllCaches();
 
   if (Settings.UseRules && isDeepSleepEnabled())
   {
@@ -484,13 +491,10 @@ void RTOS_TaskServers( void * parameter )
 
 void RTOS_TaskSerial( void * parameter )
 {
- while (true){
+  while (true){
     delay(100);
-    if (Settings.UseSerial)
-    if (Serial.available())
-      if (!PluginCall(PLUGIN_SERIAL_IN, 0, dummyString))
-        serial();
- }
+    serial();
+  }
 }
 
 void RTOS_Task10ps( void * parameter )
@@ -687,22 +691,24 @@ void backgroundtasks()
     return;
   }
   START_TIMER
-  const bool networkConnected = NetworkConnected();
+  #if defined(FEATURE_ARDUINO_OTA) || defined(FEATURE_MDNS)
+  const bool networkConnected = 
+  #endif
+  NetworkConnected();
   runningBackgroundTasks=true;
 
+  /*
+  // Not needed anymore, see: https://arduino-esp8266.readthedocs.io/en/latest/faq/readme.html#how-to-clear-tcp-pcbs-in-time-wait-state
   if (networkConnected) {
     #if defined(ESP8266)
       tcpCleanup();
     #endif
   }
+  */
+
   process_serialWriteBuffer();
   if(!UseRTOSMultitasking){
-    if (Settings.UseSerial && Serial.available()) {
-      String dummy;
-      if (!PluginCall(PLUGIN_SERIAL_IN, 0, dummy)) {
-        serial();
-      }
-    }
+    serial();
     if (webserverRunning) {
       web_server.handleClient();
     }
@@ -716,9 +722,12 @@ void backgroundtasks()
     }
   }
 
+  #ifdef FEATURE_DNS_SERVER
   // process DNS, only used if the ESP has no valid WiFi config
-  if (dnsServerActive)
+  if (dnsServerActive) {
     dnsServer.processNextRequest();
+  }
+  #endif
 
   #ifdef FEATURE_ARDUINO_OTA
   if(Settings.ArduinoOTAEnable && networkConnected)
@@ -738,7 +747,10 @@ void backgroundtasks()
   #ifdef FEATURE_MDNS
   // Allow MDNS processing
   if (networkConnected) {
+    #ifdef ESP8266
+    // ESP32 does not have an update() function
     MDNS.update();
+    #endif
   }
   #endif
 

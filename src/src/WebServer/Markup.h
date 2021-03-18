@@ -58,6 +58,8 @@ void addRowLabel(const String& label, const String& id = "");
 // Add a row label and mark it with copy markers to copy it to clipboard.
 void addRowLabel_copy(const String& label);
 
+void addRowLabel(LabelType::Enum label);
+
 void addRowLabelValue(LabelType::Enum label);
 
 void addRowLabelValue_copy(LabelType::Enum label);
@@ -85,7 +87,7 @@ void addCheckBox(const String& id, boolean checked, bool disabled = false);
 // ********************************************************************************
 void addNumericBox(const String& id, int value, int min, int max);
 
-void addFloatNumberBox(const String& id, float value, float min, float max);
+void addFloatNumberBox(const String& id, float value, float min, float max, byte nrDecimals = 6, float stepsize = 0.0f);
 
 // ********************************************************************************
 // Add Textbox

@@ -189,6 +189,10 @@ void addRowLabel_copy(const String& label) {
   html_copyText_TD();
 }
 
+void addRowLabel(LabelType::Enum label) {
+  addRowLabel(getLabel(label));
+}
+
 void addRowLabelValue(LabelType::Enum label) {
   addRowLabel(getLabel(label));
   addHtml(getValue(label));
@@ -300,7 +304,7 @@ void addNumericBox(const String& id, int value, int min, int max)
   addHtml('>');
 }
 
-void addFloatNumberBox(const String& id, float value, float min, float max)
+void addFloatNumberBox(const String& id, float value, float min, float max, byte nrDecimals, float stepsize)
 {
   String html;
 
@@ -310,13 +314,22 @@ void addFloatNumberBox(const String& id, float value, float min, float max)
   html += id;
   html += '\'';
   html += F(" min=");
-  html += String(min, 6);
+  html += String(min, nrDecimals);
   html += F(" max=");
-  html += String(max, 6);
-  html += F(" step=0.000001");
+  html += String(max, nrDecimals);
+  html += F(" step=");
+  if (stepsize <= 0.0f) {
+    html += F("0.");
+    for (byte i = 1; i < nrDecimals; ++i) {
+      html += '0';
+    }
+    html += '1';
+  } else {
+    html += String(stepsize, nrDecimals);
+  }
 
   html += F(" style='width:7em;' value=");
-  html += String(value, 6);
+  html += String(value, nrDecimals);
   html += '>';
 
   addHtml(html);

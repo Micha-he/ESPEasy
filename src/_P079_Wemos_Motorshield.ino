@@ -119,7 +119,7 @@ boolean Plugin_079(byte function, struct EventStruct *event, String& string)
         I2C_ADDR_PCFG_P079 = DEF_I2C_ADDRESS_079;
       }
       String i2c_addres_string = formatToHex(I2C_ADDR_PCFG_P079);
-      addFormTextBox(F("I2C Address (Hex)"), F("p079_adr"), i2c_addres_string, 4);
+      addFormTextBox(F("I2C Address (Hex)"), F("i2c_addr"), i2c_addres_string, 4);
 
       // Validate Shield Type.
       bool valid = false;
@@ -155,7 +155,7 @@ boolean Plugin_079(byte function, struct EventStruct *event, String& string)
     }
 
     case PLUGIN_WEBFORM_SAVE: {
-      String i2c_address = web_server.arg(F("p079_adr"));
+      String i2c_address = web_server.arg(F("i2c_addr"));
       I2C_ADDR_PCFG_P079   = (int)strtol(i2c_address.c_str(), 0, 16);
       SHIELD_VER_PCFG_P079 = getFormItemInt(F("p079_shield_type"));
 
@@ -264,7 +264,7 @@ boolean Plugin_079(byte function, struct EventStruct *event, String& string)
             }
           }
           addLog(LOG_LEVEL_INFO, ModeStr);
-          SendStatus(event->Source, ModeStr + String(F(" <br>"))); // Reply (echo) to sender. This will print message on browser.
+          SendStatus(event, ModeStr + String(F(" <br>"))); // Reply (echo) to sender. This will print message on browser.
           return true;                                             // Exit now. Info Log shows Lolin Info.
         }
         else {
@@ -329,7 +329,7 @@ boolean Plugin_079(byte function, struct EventStruct *event, String& string)
         if (parse_error == true) {
           String ErrorStr = ModeStr + String(F(": CMD Syntax Error"));
           addLog(LOG_LEVEL_INFO, ErrorStr);
-          SendStatus(event->Source, ErrorStr + String(F(" <br>"))); // Reply (echo) to sender. This will print message on browser.
+          SendStatus(event, ErrorStr + String(F(" <br>"))); // Reply (echo) to sender. This will print message on browser.
         }
         else {
           switch (motor_dir) {

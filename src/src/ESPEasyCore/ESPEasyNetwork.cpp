@@ -1,4 +1,4 @@
-#include "ESPEasyNetwork.h"
+#include "../ESPEasyCore/ESPEasyNetwork.h"
 
 #include "../ESPEasyCore/ESPEasy_Log.h"
 #include "../ESPEasyCore/ESPEasyEth.h"
@@ -6,10 +6,28 @@
 #include "../Globals/NetworkState.h"
 #include "../Globals/Settings.h"
 #include "../Helpers/StringConverter.h"
+#include "../Helpers/MDNS_Helper.h"
 
 #ifdef HAS_ETHERNET
 #include "ETH.h"
 #endif
+
+void setNetworkMedium(NetworkMedium_t medium) {
+  switch (active_network_medium) {
+    case NetworkMedium_t::Ethernet:
+      #ifdef HAS_ETHERNET
+      // FIXME TD-er: How to 'end' ETH?
+//      ETH.end();
+      #endif
+      break;
+    case NetworkMedium_t::WIFI:
+      WiFi.mode(WIFI_OFF);
+      break;
+  }
+  active_network_medium = medium;
+  addLog(LOG_LEVEL_INFO, String(F("Set Network mode: ")) + toString(active_network_medium));
+}
+
 
 /*********************************************************************************************\
    Ethernet or Wifi Support for ESP32 Build flag HAS_ETHERNET
@@ -17,15 +35,13 @@
 void NetworkConnectRelaxed() {
   if (NetworkConnected()) return;
 #ifdef HAS_ETHERNET
-  addLog(LOG_LEVEL_INFO, F("Connect to: "));
-  addLog(LOG_LEVEL_INFO, toString(active_network_medium));
   if(active_network_medium == NetworkMedium_t::Ethernet) {
     if (ETHConnectRelaxed()) {
       return;
     }
     // Failed to start the Ethernet network, probably not present of wrong parameters.
     // So set the runtime active medium to WiFi to try connecting to WiFi or at least start the AP.
-    active_network_medium = NetworkMedium_t::WIFI;
+    setNetworkMedium(NetworkMedium_t::WIFI);
   }
 #endif
   WiFiConnectRelaxed();
@@ -35,12 +51,9 @@ bool NetworkConnected() {
   #ifdef HAS_ETHERNET
   if(active_network_medium == NetworkMedium_t::Ethernet) {
     return ETHConnected();
-  } else {
-    return WiFiConnected();
   }
-  #else
-  return WiFiConnected();
   #endif
+  return WiFiConnected();
 }
 
 IPAddress NetworkLocalIP() {
@@ -52,12 +65,9 @@ IPAddress NetworkLocalIP() {
       addLog(LOG_LEVEL_ERROR, F("Call NetworkLocalIP() only on connected Ethernet!"));
       return IPAddress();
     }
-  } else {
-    return WiFi.localIP();
   }
-  #else
-  return WiFi.localIP();
   #endif
+  return WiFi.localIP();
 }
 
 IPAddress NetworkSubnetMask() {
@@ -69,12 +79,9 @@ IPAddress NetworkSubnetMask() {
       addLog(LOG_LEVEL_ERROR, F("Call NetworkSubnetMask() only on connected Ethernet!"));
       return IPAddress();
     }
-  } else {
-    return WiFi.subnetMask();
   }
-  #else
-  return WiFi.subnetMask();
   #endif
+  return WiFi.subnetMask();
 }
 
 IPAddress NetworkGatewayIP() {
@@ -86,12 +93,9 @@ IPAddress NetworkGatewayIP() {
       addLog(LOG_LEVEL_ERROR, F("Call NetworkGatewayIP() only on connected Ethernet!"));
       return IPAddress();
     }
-  } else {
-    return WiFi.gatewayIP();
   }
-  #else
-  return WiFi.gatewayIP();
   #endif
+  return WiFi.gatewayIP();
 }
 
 IPAddress NetworkDnsIP (uint8_t dns_no) {
@@ -103,12 +107,9 @@ IPAddress NetworkDnsIP (uint8_t dns_no) {
       addLog(LOG_LEVEL_ERROR, F("Call NetworkDnsIP(uint8_t dns_no) only on connected Ethernet!"));
       return IPAddress();
     }
-  } else {
-    return WiFi.dnsIP(dns_no);
   }
-  #else
-  return WiFi.dnsIP(dns_no);
   #endif
+  return WiFi.dnsIP(dns_no);
 }
 
 String NetworkMacAddress() {
@@ -134,12 +135,9 @@ uint8_t * NetworkMacAddressAsBytes(uint8_t* mac) {
   #ifdef HAS_ETHERNET
   if(active_network_medium == NetworkMedium_t::Ethernet) {
     return ETHMacAddress(mac);
-  } else {
-    return WiFi.macAddress(mac);
   }
-  #else
-  return WiFi.macAddress(mac);
   #endif
+  return WiFi.macAddress(mac);
 }
 
 String NetworkGetHostname() {
@@ -148,10 +146,8 @@ String NetworkGetHostname() {
       if(Settings.NetworkMedium == NetworkMedium_t::Ethernet) {
         return String(ETH.getHostname());
       }
-        return String(WiFi.getHostname());
-      #else
-        return String(WiFi.getHostname());
       #endif
+      return String(WiFi.getHostname());
     #else
       return String(WiFi.hostname());
     #endif
@@ -174,8 +170,8 @@ String NetworkCreateRFCCompliantHostname(bool force_add_unitnr) {
 String createRFCCompliantHostname(const String& oldString) {
   String result(oldString);
 
-  result.replace(" ", "-");
-  result.replace("_", "-"); // See RFC952
+  result.replace(' ', '-');
+  result.replace('_', '-'); // See RFC952
   return result;
 }
 
@@ -185,4 +181,9 @@ String WifiSoftAPmacAddress() {
     char     macaddress[20];
     formatMAC(macread, macaddress);
     return String(macaddress);
+}
+
+void CheckRunningServices() {
+  set_mDNS();
+  SetWiFiTXpower();
 }

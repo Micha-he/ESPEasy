@@ -4,6 +4,7 @@
 #include "../../_Plugin_Helper.h"
 
 #include "../DataStructs/ESPEasy_EventStruct.h"
+#include "../Globals/Cache.h"
 #include "../Helpers/StringConverter.h"
 #include "../Helpers/StringGenerator_GPIO.h"
 
@@ -102,6 +103,7 @@ String serialHelper_getSerialTypeLabel(struct EventStruct *event) {
   return serialHelper_getSerialTypeLabel(serialHelper_getSerialType(event));
 }
 
+#ifndef DISABLE_SC16IS752_Serial
 void serialHelper_addI2CuartSelectors(int address, int channel) {
   #define     SC16IS752_I2C_ADDRESSES             16
   #define     SC16IS752_I2C_BASE_ADDR             (0x90 >> 1)
@@ -144,6 +146,7 @@ void serialHelper_addI2CuartSelectors(int address, int channel) {
     addFormSelector(F("Channel"), F("i2cuart_ch"), SC16IS752_CHANNELS, chOptions, chValues, channel);
   }
 }
+#endif
 
 void serialHelper_webformLoad(struct EventStruct *event) {
   serialHelper_webformLoad(event, true);
@@ -162,7 +165,9 @@ void serialHelper_webformLoad(struct EventStruct *event, bool allowSoftwareSeria
 void serialHelper_webformLoad(ESPEasySerialPort port, int rxPinDef, int txPinDef, bool allowSoftwareSerial) {
   // Field for I2C addr & RX are shared
   // Field for channel and TX are shared
+  #ifndef DISABLE_SC16IS752_Serial
   serialHelper_addI2CuartSelectors(rxPinDef, txPinDef);
+  #endif
   #ifdef ESP8266
 
   // Script to show GPIO pins for SoftwareSerial or I2C addresses for the I2C to UART bridge
@@ -239,10 +244,6 @@ void serialHelper_webformLoad(ESPEasySerialPort port, int rxPinDef, int txPinDef
                          static_cast<int>(ESPeasySerialType::getSerialType(port, rxPinDef, txPinDef)),
                          F("serialPortChanged(this)")); // Script to toggle GPIO visibility when changing selection.
   html_add_script(F("document.getElementById('serPort').onchange();"), false);
-
-  if (Settings.UseSerial) {
-    addFormNote(F("Do <b>NOT</b> combine HW Serial0 and log to serial on Tools->Advanced->Serial Port."));
-  }
 #ifdef ESP8266
   if ((rxPinDef == 15) || (txPinDef == 15)) {
     addFormNote(F("GPIO-15 (D8) requires a Buffer Circuit (PNP transistor) or ESP boot may fail."));
@@ -262,10 +263,12 @@ void serialHelper_webformSave(byte& port, int8_t& rxPin, int8_t& txPin) {
   switch (serType) {
     case ESPEasySerialPort::software:
       break;
+    #ifndef DISABLE_SC16IS752_Serial
     case ESPEasySerialPort::sc16is752:
       rxPin = getFormItemInt(F("i2cuart_addr"), rxPin);
       txPin = getFormItemInt(F("i2cuart_ch"), txPin);
       break;
+    #endif
     case ESPEasySerialPort::serial0:
     case ESPEasySerialPort::serial0_swap:
     case ESPEasySerialPort::serial1:
@@ -290,20 +293,6 @@ void serialHelper_webformSave(byte& port, int8_t& rxPin, int8_t& txPin) {
 
 void serialHelper_webformSave(struct EventStruct *event) {
   serialHelper_webformSave(CONFIG_PORT, CONFIG_PIN1, CONFIG_PIN2);
-}
-
-void serialHelper_plugin_init(struct EventStruct *event) {
-  ESPEasySerialPort serType = serialHelper_getSerialType(event);
-
-  if (serType == ESPEasySerialPort::serial0) {
-    Settings.UseSerial = false; // Disable global Serial port.
-  }
-  #ifdef ESP8266
-
-  if (serType == ESPEasySerialPort::serial0_swap) {
-    Settings.UseSerial = false; // Disable global Serial port.
-  }
-  #endif // ifdef ESP8266
 }
 
 bool serialHelper_isValid_serialconfig(byte serialconfig) {

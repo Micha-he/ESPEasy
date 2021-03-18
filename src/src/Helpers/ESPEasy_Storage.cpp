@@ -7,6 +7,7 @@
 #include "../DataStructs/TimingStats.h"
 
 #include "../ESPEasyCore/ESPEasy_Log.h"
+#include "../ESPEasyCore/ESPEasyNetwork.h"
 #include "../ESPEasyCore/ESPEasyWifi.h"
 #include "../ESPEasyCore/Serial.h"
 
@@ -29,7 +30,6 @@
 #include "../Helpers/ESPEasy_time_calc.h"
 #include "../Helpers/FS_Helper.h"
 #include "../Helpers/Hardware.h"
-#include "../Helpers/MDNS_Helper.h"
 #include "../Helpers/Memory.h"
 #include "../Helpers/Misc.h"
 #include "../Helpers/Numerical.h"
@@ -117,7 +117,14 @@ String appendToFile(const String& fname, const uint8_t *data, unsigned int size)
 }
 
 bool fileExists(const String& fname) {
-  return ESPEASY_FS.exists(patch_fname(fname));
+  const String patched_fname = patch_fname(fname);
+  auto search = Cache.fileExistsMap.find(patched_fname);
+  if (search != Cache.fileExistsMap.end()) {
+    return search->second;
+  }
+  bool res = ESPEASY_FS.exists(patched_fname);
+  Cache.fileExistsMap[patched_fname] = res;
+  return res;
 }
 
 fs::File tryOpenFile(const String& fname, const String& mode) {
@@ -129,8 +136,11 @@ fs::File tryOpenFile(const String& fname, const String& mode) {
 
   bool exists = fileExists(fname);
 
-  if ((mode == F("r")) && !exists) {
-    return f;
+  if (!exists) {
+    if (mode == F("r")) {
+      return f;
+    }
+    Cache.fileExistsMap.clear();
   }
   f = ESPEASY_FS.open(patch_fname(fname), mode.c_str());
   STOP_TIMER(TRY_OPEN_FILE);
@@ -138,7 +148,9 @@ fs::File tryOpenFile(const String& fname, const String& mode) {
 }
 
 bool tryRenameFile(const String& fname_old, const String& fname_new) {
+  Cache.fileExistsMap.clear();
   if (fileExists(fname_old) && !fileExists(fname_new)) {
+    clearAllCaches();
     return ESPEASY_FS.rename(patch_fname(fname_old), patch_fname(fname_new));
   }
   return false;
@@ -148,6 +160,7 @@ bool tryDeleteFile(const String& fname) {
   if (fname.length() > 0)
   {
     bool res = ESPEASY_FS.remove(patch_fname(fname));
+    clearAllCaches();
 
     // A call to GarbageCollection() will at most erase a single block. (e.g. 8k block size)
     // A deleted file may have covered more than a single block, so try to clear multiple blocks.
@@ -260,6 +273,10 @@ String BuildFixes()
     }
     #endif
   }
+  if (Settings.Build < 20112) {
+    Settings.WiFi_TX_power = 70; // 70 = 17.5dBm. unit: 0.25 dBm
+    Settings.WiFi_sensitivity_margin = 3; // Margin in dBm on top of sensitivity.
+  }
 
   Settings.Build = BUILD;
   return SaveSettings();
@@ -277,6 +294,7 @@ void fileSystemCheck()
 
   if (ESPEASY_FS.begin())
   {
+    clearAllCaches();
     #if defined(ESP8266)
     fs::FSInfo fs_info;
     ESPEASY_FS.info(fs_info);
@@ -416,7 +434,7 @@ void afterloadSettings() {
   if (!Settings.UseRules) {
     eventQueue.clear();
   }
-  set_mDNS(); // To update changes in hostname.
+  CheckRunningServices(); // To update changes in hostname.
 }
 
 /********************************************************************************************\
@@ -738,8 +756,8 @@ String LoadTaskSettings(taskIndex_t TaskIndex)
   if (ExtraTaskSettings.TaskIndex == TaskIndex) {
     return String(); // already loaded
   }
-
   if (!validTaskIndex(TaskIndex)) {
+    ExtraTaskSettings.clear();
     return String(); // Un-initialized task index.
   }
   #ifndef BUILD_NO_RAM_TRACKER

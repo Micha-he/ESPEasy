@@ -45,12 +45,14 @@ void handle_root() {
 
   // if index.htm exists on FS serve that one (first check if gziped version exists)
   if (loadFromFS(true, F("/index.htm.gz"))) { return; }
-
+  #ifdef FEATURE_SD
   if (loadFromFS(false, F("/index.htm.gz"))) { return; }
+  #endif
 
   if (loadFromFS(true, F("/index.htm"))) { return; }
-
+  #ifdef FEATURE_SD
   if (loadFromFS(false, F("/index.htm"))) { return; }
+  #endif
 
   TXBuffer.startStream();
   String  sCommand  = web_server.arg(F("cmd"));
@@ -94,7 +96,7 @@ void handle_root() {
 
     addRowLabelValue(LabelType::UNIT_NR);
     addRowLabelValue(LabelType::GIT_BUILD);
-    addRowLabel(getLabel(LabelType::LOCAL_TIME));
+    addRowLabel(LabelType::LOCAL_TIME);
 
     if (node_time.systemTimePresent())
     {
@@ -104,11 +106,11 @@ void handle_root() {
       addHtml(F("<font color='red'>No system time source</font>"));
     }
 
-    addRowLabel(getLabel(LabelType::UPTIME));
+    addRowLabel(LabelType::UPTIME);
     {
       addHtml(getExtendedValue(LabelType::UPTIME));
     }
-    addRowLabel(getLabel(LabelType::LOAD_PCT));
+    addRowLabel(LabelType::LOAD_PCT);
 
     if (wdcounter > 0)
     {
@@ -121,7 +123,7 @@ void handle_root() {
       addHtml(html);
     }
     {
-      addRowLabel(getLabel(LabelType::FREE_MEM));
+      addRowLabel(LabelType::FREE_MEM);
       String html;
       html.reserve(64);
       html += freeMem;
@@ -135,7 +137,7 @@ void handle_root() {
       addHtml(html);
     }
     {
-      addRowLabel(getLabel(LabelType::FREE_STACK));
+      addRowLabel(LabelType::FREE_STACK);
       String html;
       html.reserve(64);
       html += String(getCurrentFreeStack());
@@ -149,22 +151,26 @@ void handle_root() {
       addHtml(html);
     }
 
-    addRowLabelValue(LabelType::IP_ADDRESS);
-    addRowLabel(getLabel(LabelType::WIFI_RSSI));
+#ifdef HAS_ETHERNET
+    addRowLabelValue(LabelType::ETH_WIFI_MODE);
+#endif
 
-    if (NetworkConnected())
+    if (
+      active_network_medium == NetworkMedium_t::WIFI &&
+      NetworkConnected())
     {
+      addRowLabelValue(LabelType::IP_ADDRESS);
+      addRowLabel(LabelType::WIFI_RSSI);
       String html;
       html.reserve(32);
       html += String(WiFi.RSSI());
-      html += F(" dB (");
+      html += F(" dBm (");
       html += WiFi.SSID();
       html += ')';
       addHtml(html);
     }
 
 #ifdef HAS_ETHERNET
-    addRowLabelValue(LabelType::ETH_WIFI_MODE);
     if(active_network_medium == NetworkMedium_t::Ethernet) {
       addRowLabelValue(LabelType::ETH_SPEED_STATE);
       addRowLabelValue(LabelType::ETH_IP_ADDRESS);
@@ -173,7 +179,7 @@ void handle_root() {
 
     #ifdef FEATURE_MDNS
     {
-      addRowLabel(getLabel(LabelType::M_DNS));
+      addRowLabel(LabelType::M_DNS);
       String html;
       html.reserve(64);
       html += F("<a href='http://");
@@ -208,11 +214,11 @@ void handle_root() {
     html_table_class_multirow_noborder();
     html_TR();
     html_table_header(F("Node List"));
-    html_table_header("Name");
+    html_table_header(F("Name"));
     html_table_header(getLabel(LabelType::BUILD_DESC));
-    html_table_header("Type");
-    html_table_header("IP", 160); // Should fit "255.255.255.255"
-    html_table_header("Age");
+    html_table_header(F("Type"));
+    html_table_header(F("IP"), 160); // Should fit "255.255.255.255"
+    html_table_header(F("Age"));
 
     for (NodesMap::iterator it = Nodes.begin(); it != Nodes.end(); ++it)
     {
@@ -228,7 +234,7 @@ void handle_root() {
         }
 
         addHtml(F("Unit "));
-        addHtml(String(it->first));
+        addHtmlInt(it->first);
         html_TD();
 
         if (isThisUnit) {
@@ -240,7 +246,7 @@ void handle_root() {
         html_TD();
 
         if (it->second.build) {
-          addHtml(String(it->second.build));
+          addHtmlInt(it->second.build);
         }
         html_TD();
         addHtml(getNodeTypeDisplayString(it->second.nodeType));
@@ -263,7 +269,7 @@ void handle_root() {
           addHtml(html);
         }
         html_TD();
-        addHtml(String(it->second.age));
+        addHtmlInt(it->second.age);
       }
     }
 
