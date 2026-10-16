@@ -1480,17 +1480,14 @@ String LoadTaskSettings(taskIndex_t TaskIndex)
   START_TIMER
 
   ExtraTaskSettings.clear();
+  Cache.clearTaskCache(TaskIndex);
+
   const deviceIndex_t DeviceIndex = getDeviceIndex_from_TaskIndex(TaskIndex);
 
   if (!validDeviceIndex(DeviceIndex)) {
     // No need to load from storage, as there is no plugin assigned to this task.
     ExtraTaskSettings.TaskIndex = TaskIndex; // Needed when an empty task was requested
 
-    // FIXME TD-er: Do we need to keep a cache of an empty task?
-    // Maybe better to do this?
-    Cache.clearTaskCache(TaskIndex);
-
-    //    Cache.updateExtraTaskSettingsCache_afterLoad_Save();
     return EMPTY_STRING;
   }
   #ifndef BUILD_NO_RAM_TRACKER
@@ -2009,7 +2006,7 @@ String doSaveToFile(const char *fname, int index, const uint8_t *memAddress, int
   }
   #endif // ifndef BUILD_NO_DEBUG
   delay(1);
-  unsigned long timer = millis() + 50;
+  uint32_t timer = millis() + 50;
   fs::File f          = tryOpenFile(fname, mode);
 
   if (f) {
@@ -2790,7 +2787,7 @@ void deleteBakFiles()
 bool validateUploadConfigDat(const uint8_t *buf) {
   bool result = false;
   struct TempStruct {
-    unsigned long PID;
+    uint32_t PID;
     int           Version;
   } Temp;
 

@@ -63,7 +63,7 @@ struct Dallas_SensorData {
 extern unsigned char ROM_NO[8];
 extern uint8_t LastDiscrepancy;
 extern uint8_t LastFamilyDiscrepancy;
-extern uint8_t LastDeviceFlag;
+extern bool LastDeviceFlag;
 
 
 /*********************************************************************************************\
@@ -239,8 +239,8 @@ void Dallas_write_bit(uint8_t v,
 void Dallas_write_bit_ISR(uint8_t   v,
                           int8_t    gpio_pin_rx,
                           int8_t    gpio_pin_tx,
-                          long      low_time,
-                          long      high_time,
+                          int32_t      low_time,
+                          int32_t      high_time,
                           uint32_t& start);
 
 /*********************************************************************************************\
