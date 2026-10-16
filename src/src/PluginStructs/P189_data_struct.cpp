@@ -6,16 +6,7 @@
 // Constructor
 // =======================================================================================================
 
-P189_data_struct::P189_data_struct(ESPEasySerialPort portType,
-                                   int8_t rxPin,
-                                   int8_t txPin,
-                                   uint32_t baudRate,
-                                   const P189_config_t& config)
-  : _portType(portType),
-    _rxPin(rxPin),
-    _txPin(txPin),
-    _baudRate(baudRate),
-    _config(config)
+P189_data_struct::P189_data_struct(ESPEasySerialPort portType, int8_t rxPin, int8_t txPin, uint32_t baudRate, const P189_config_t& config):_portType(portType), _rxPin(rxPin), _txPin(txPin), _baudRate(baudRate), _config(config)
 {
   resetParser();
 }
@@ -38,7 +29,6 @@ static P189_config_t P189_defaultConfig()
     config.moveThreshold[gate]  = P189_FACTORY_MOVE[gate];
     config.stillThreshold[gate] = P189_FACTORY_STILL[gate];
   }
-
   return config;
 }
 
@@ -47,20 +37,16 @@ static P189_config_t P189_defaultConfig()
 // Load custom configuration
 // =======================================================================================================
 
-void P189_data_struct::loadConfig(taskIndex_t taskIndex,
-                                  P189_config_t& config)
+void P189_data_struct::loadConfig(taskIndex_t taskIndex, P189_config_t& config)
 {
   config = P189_defaultConfig();
 
   P189_config_t stored{};
 
-  LoadCustomTaskSettings(taskIndex,
-                         reinterpret_cast<uint8_t *>(&stored),
-                         sizeof(stored));
+  LoadCustomTaskSettings(taskIndex, reinterpret_cast<uint8_t *>(&stored), sizeof(stored));
 
   if (stored.version != P189_CONFIG_VERSION) {
-    addLog(LOG_LEVEL_INFO,
-           F("P189: Old/invalid configuration, using defaults"));
+    addLog(LOG_LEVEL_INFO, F("P189: Old/invalid configuration, using defaults"));
     return;
   }
 
@@ -90,12 +76,9 @@ void P189_data_struct::loadConfig(taskIndex_t taskIndex,
 // Save custom configuration
 // =======================================================================================================
 
-void P189_data_struct::saveConfig(taskIndex_t taskIndex,
-                                  const P189_config_t& config)
+void P189_data_struct::saveConfig(taskIndex_t taskIndex, const P189_config_t& config)
 {
-  SaveCustomTaskSettings(taskIndex,
-                         reinterpret_cast<const uint8_t *>(&config),
-                         sizeof(config));
+  SaveCustomTaskSettings(taskIndex, reinterpret_cast<const uint8_t *>(&config), sizeof(config));
 }
 
 
@@ -119,31 +102,20 @@ bool P189_data_struct::init()
     return true;
   }
 
-  _serial = new (std::nothrow) ESPeasySerial(_portType,
-                                              _rxPin,
-                                              _txPin,
-                                              false,
-                                              512);
+  _serial = new (std::nothrow) ESPeasySerial(_portType, _rxPin, _txPin, false, 512);
 
   if (_serial == nullptr) {
-    addLog(LOG_LEVEL_ERROR,
-           F("P189: Could not allocate serial interface"));
+    addLog(LOG_LEVEL_ERROR, F("P189: Could not allocate serial interface"));
     return false;
   }
 
   _serial->setRxBufferSize(512);
   _serial->begin(_baudRate);
-
   delay(50);
-
   flushSerial();
-
   _initialized = true;
-
-  String logMessage = concat(F("P189: LD2420 UART initialized at "),
-                             String(_baudRate));
-  logMessage += F(" baud");
-  addLog(LOG_LEVEL_INFO, logMessage);
+ 
+  addLog(LOG_LEVEL_INFO, strformat(F("P189: LD2420 UART initialized at %d baud"), _baudRate));
 
   return true;
 }
@@ -160,7 +132,6 @@ void P189_data_struct::disconnectSerial()
     delete _serial;
     _serial = nullptr;
   }
-
   _initialized = false;
 }
 
@@ -234,9 +205,7 @@ bool P189_data_struct::readConfiguration(P189_config_t& config)
 
   if (result) {
     for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
-      if (!readGateThreshold(gate,
-                             config.moveThreshold[gate],
-                             config.stillThreshold[gate])) {
+      if (!readGateThreshold(gate, config.moveThreshold[gate], config.stillThreshold[gate])) {
         result = false;
         break;
       }
@@ -255,8 +224,7 @@ bool P189_data_struct::readConfiguration(P189_config_t& config)
     config.version = P189_CONFIG_VERSION;
     _config = config;
 
-    addLog(LOG_LEVEL_INFO,
-           F("P189: LD2420 configuration read successfully"));
+    addLog(LOG_LEVEL_INFO, F("P189: LD2420 configuration read successfully"));
   }
 
   return result;
@@ -273,13 +241,7 @@ bool P189_data_struct::applyConfiguration()
     return false;
   }
 
-  String logMessage = concat(F("P189: Applying LD2420 configuration, gates "),
-                             String(_config.minGate));
-  logMessage += F("..");
-  logMessage += String(_config.maxGate);
-  logMessage += F(", timeout=");
-  logMessage += String(_config.timeout);
-  addLog(LOG_LEVEL_INFO, logMessage);
+  addLog(LOG_LEVEL_INFO, strformat(F("P189: Applying LD2420 configuration, gates %d..%d, timeout=%d"), _config.minGate, _config.maxGate, _config.timeout));
 
   if (!setConfigMode(true)) {
     return false;
@@ -287,9 +249,7 @@ bool P189_data_struct::applyConfiguration()
 
   bool result = true;
 
-  if (!setMinMaxTimeout(_config.minGate,
-                        _config.maxGate,
-                        _config.timeout)) {
+  if (!setMinMaxTimeout(_config.minGate, _config.maxGate, _config.timeout)) {
     result = false;
   }
 
@@ -299,7 +259,6 @@ bool P189_data_struct::applyConfiguration()
         result = false;
         break;
       }
-
       delay(20);
     }
   }
@@ -315,8 +274,7 @@ bool P189_data_struct::applyConfiguration()
   flushSerial();
 
   if (result) {
-    addLog(LOG_LEVEL_INFO,
-           F("P189: LD2420 configuration applied"));
+    addLog(LOG_LEVEL_INFO, F("P189: LD2420 configuration applied"));
   }
 
   return result;
@@ -348,14 +306,11 @@ bool P189_data_struct::factoryReset()
   const P189_config_t oldConfig = _config;
   _config = factoryConfig;
 
-  addLog(LOG_LEVEL_INFO,
-         F("P189: Writing LD2420 factory configuration"));
+  addLog(LOG_LEVEL_INFO, F("P189: Writing LD2420 factory configuration"));
 
   if (!applyConfiguration()) {
     _config = oldConfig;
-
-    addLog(LOG_LEVEL_ERROR,
-           F("P189: Factory reset failed"));
+    addLog(LOG_LEVEL_ERROR, F("P189: Factory reset failed"));
     return false;
   }
 
@@ -363,17 +318,12 @@ bool P189_data_struct::factoryReset()
 
   if (!readConfiguration(verifiedConfig)) {
     _config = oldConfig;
-
-    addLog(LOG_LEVEL_ERROR,
-           F("P189: Factory reset verification failed"));
+    addLog(LOG_LEVEL_ERROR, F("P189: Factory reset verification failed"));
     return false;
   }
 
   _config = verifiedConfig;
-
-  addLog(LOG_LEVEL_INFO,
-         F("P189: Factory configuration restored and verified"));
-
+  addLog(LOG_LEVEL_INFO, F("P189: Factory configuration restored and verified"));
   return true;
 }
 
@@ -393,10 +343,8 @@ bool P189_data_struct::restartSensor()
   }
 
   const bool result = sendCommand(0x0068, nullptr, 0);
-
-  flushSerial();
   delay(250);
-
+  flushSerial();
   return result;
 }
 
@@ -405,8 +353,7 @@ bool P189_data_struct::restartSensor()
 // Plugin command handler
 // =======================================================================================================
 
-bool P189_data_struct::plugin_write(EventStruct *event,
-                                    String& string)
+bool P189_data_struct::plugin_write(EventStruct *event, String& string)
 {
   const String command = parseString(string, 1);
 
@@ -449,8 +396,7 @@ bool P189_data_struct::plugin_write(EventStruct *event,
 // [Task#Value]
 // =======================================================================================================
 
-bool P189_data_struct::plugin_get_config_value(EventStruct *event,
-                                                String& string)
+bool P189_data_struct::plugin_get_config_value(EventStruct *event, String& string)
 {
   const String valueName = parseString(event->String1, 1);
 
@@ -493,17 +439,13 @@ bool P189_data_struct::plugin_get_config_value(EventStruct *event,
 
 uint16_t P189_data_struct::readLE16(const uint8_t *data)
 {
-  return static_cast<uint16_t>(data[0]) |
-         (static_cast<uint16_t>(data[1]) << 8);
+  return static_cast<uint16_t>(data[0]) | (static_cast<uint16_t>(data[1]) << 8);
 }
 
 
 uint32_t P189_data_struct::readLE32(const uint8_t *data)
 {
-  return static_cast<uint32_t>(data[0]) |
-         (static_cast<uint32_t>(data[1]) << 8) |
-         (static_cast<uint32_t>(data[2]) << 16) |
-         (static_cast<uint32_t>(data[3]) << 24);
+  return static_cast<uint32_t>(data[0]) | (static_cast<uint32_t>(data[1]) << 8) | (static_cast<uint32_t>(data[2]) << 16) | (static_cast<uint32_t>(data[3]) << 24);
 }
 
 
@@ -558,11 +500,7 @@ void P189_data_struct::resetParser()
 // Send LD2420 command
 // =======================================================================================================
 
-bool P189_data_struct::sendCommand(uint16_t command,
-                                   const uint8_t *data,
-                                   uint8_t dataLength,
-                                   P189_CommandResponse *response,
-                                   uint32_t timeoutMs)
+bool P189_data_struct::sendCommand(uint16_t command, const uint8_t *data, uint8_t dataLength, P189_CommandResponse *response, uint32_t timeoutMs)
 {
   if (_serial == nullptr) {
     return false;
@@ -603,6 +541,11 @@ bool P189_data_struct::sendCommand(uint16_t command,
   _serial->write(tx, pos);
   _serial->flush();
 
+  // Restart: The sensor may reboot before returning an ACK.
+  if (command == 0x0068) {
+    return true;
+  }
+
   uint8_t rx[96];
   uint16_t rxPos = 0;
   const uint32_t start = millis();
@@ -629,10 +572,7 @@ bool P189_data_struct::sendCommand(uint16_t command,
       int header = -1;
 
       for (uint16_t i = 0; i + 3 < rxPos; ++i) {
-        if (rx[i + 0] == 0xFD &&
-            rx[i + 1] == 0xFC &&
-            rx[i + 2] == 0xFB &&
-            rx[i + 3] == 0xFA) {
+        if (rx[i + 0] == 0xFD && rx[i + 1] == 0xFC && rx[i + 2] == 0xFB && rx[i + 3] == 0xFA) {
           header = static_cast<int>(i);
           break;
         }
@@ -652,31 +592,25 @@ bool P189_data_struct::sendCommand(uint16_t command,
         continue;
       }
 
-      const uint16_t totalLength =
-        static_cast<uint16_t>(4 + 2 + responseLength + 4);
+      const uint16_t totalLength = static_cast<uint16_t>(4 + 2 + responseLength + 4);
 
       if (rxPos < static_cast<uint16_t>(header + totalLength)) {
         continue;
       }
 
-      const uint16_t footer =
-        static_cast<uint16_t>(header + totalLength - 4);
+      const uint16_t footer = static_cast<uint16_t>(header + totalLength - 4);
 
-      if (rx[footer + 0] != 0x04 ||
-          rx[footer + 1] != 0x03 ||
-          rx[footer + 2] != 0x02 ||
-          rx[footer + 3] != 0x01) {
+      if (rx[footer + 0] != 0x04 || rx[footer + 1] != 0x03 || rx[footer + 2] != 0x02 || rx[footer + 3] != 0x01) {
         memmove(rx, &rx[header + 1], rxPos - header - 1);
         rxPos = rxPos - header - 1;
         continue;
       }
 
       const uint16_t returnedCommand = readLE16(&rx[header + 6]);
+      const uint16_t expectedAck = static_cast<uint16_t>(command | 0x0100);
 
-      if (returnedCommand != command) {
-        memmove(rx,
-                &rx[header + totalLength],
-                rxPos - header - totalLength);
+      if (returnedCommand != expectedAck) {
+        memmove(rx, &rx[header + totalLength], rxPos - header - totalLength);
         rxPos = rxPos - header - totalLength;
         continue;
       }
@@ -690,12 +624,9 @@ bool P189_data_struct::sendCommand(uint16_t command,
 
         const uint16_t dataStart = static_cast<uint16_t>(header + 10);
 
-        const uint16_t dataLengthReturned =
-          responseLength >= 4 ? responseLength - 4 : 0;
+        const uint16_t dataLengthReturned = responseLength >= 4 ? responseLength - 4 : 0;
 
-        const uint8_t copyLength = static_cast<uint8_t>(
-          min(dataLengthReturned,
-              static_cast<uint16_t>(sizeof(response->data))));
+        const uint8_t copyLength = static_cast<uint8_t>(min(dataLengthReturned, static_cast<uint16_t>(sizeof(response->data))));
 
         if (copyLength > 0) {
           memcpy(response->data, &rx[dataStart], copyLength);
@@ -710,9 +641,7 @@ bool P189_data_struct::sendCommand(uint16_t command,
     delay(1);
   }
 
-  addLog(LOG_LEVEL_ERROR,
-         concat(F("P189: LD2420 command timeout 0x"),
-                String(command, HEX)));
+  addLog(LOG_LEVEL_ERROR, strformat(F("P189: LD2420 command timeout 0x%s"), String(command, HEX)));
 
   return false;
 }
@@ -755,9 +684,7 @@ bool P189_data_struct::setSystemMode(uint16_t mode)
 // Write Min/Max/Timeout
 // =======================================================================================================
 
-bool P189_data_struct::setMinMaxTimeout(uint32_t minGate,
-                                        uint32_t maxGate,
-                                        uint32_t timeout)
+bool P189_data_struct::setMinMaxTimeout(uint32_t minGate, uint32_t maxGate, uint32_t timeout)
 {
   uint8_t data[18];
   uint8_t pos = 0;
@@ -847,9 +774,7 @@ bool P189_data_struct::setGateThreshold(uint8_t gate)
 // Read gate thresholds
 // =======================================================================================================
 
-bool P189_data_struct::readGateThreshold(uint8_t gate,
-                                         uint32_t& moving,
-                                         uint32_t& still)
+bool P189_data_struct::readGateThreshold(uint8_t gate, uint32_t& moving, uint32_t& still)
 {
   if (gate >= P189_NR_GATES) {
     return false;
@@ -938,9 +863,7 @@ bool P189_data_struct::processByte(uint8_t value)
       if (value == 0xF3) {
         _parseState = P189_ParseState::Header3;
       } else {
-        _parseState = value == 0xF4
-                        ? P189_ParseState::Header2
-                        : P189_ParseState::Header1;
+        _parseState = value == 0xF4 ? P189_ParseState::Header2 : P189_ParseState::Header1;
       }
       break;
 
@@ -948,9 +871,7 @@ bool P189_data_struct::processByte(uint8_t value)
       if (value == 0xF2) {
         _parseState = P189_ParseState::Header4;
       } else {
-        _parseState = value == 0xF4
-                        ? P189_ParseState::Header2
-                        : P189_ParseState::Header1;
+        _parseState = value == 0xF4 ? P189_ParseState::Header2 : P189_ParseState::Header1;
       }
       break;
 
@@ -961,9 +882,7 @@ bool P189_data_struct::processByte(uint8_t value)
         _frameLength = 0;
         _parseState = P189_ParseState::Length1;
       } else {
-        _parseState = value == 0xF4
-                        ? P189_ParseState::Header2
-                        : P189_ParseState::Header1;
+        _parseState = value == 0xF4 ? P189_ParseState::Header2 : P189_ParseState::Header1;
       }
       break;
 

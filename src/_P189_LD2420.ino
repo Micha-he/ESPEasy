@@ -191,7 +191,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       addFormNumericBox(F("Maximum Gate"), F("maxgate"), config.maxGate, 0, 15);
       addFormNumericBox(F("Presence Timeout"), F("timeout"), config.timeout, 1, 65535);
 
-      addUnit(F("ms"));
+      addUnit(F("s"));
 
       // ---------------------------------------------------------------------------------------------
       // Gate thresholds
@@ -207,13 +207,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
         String movingName = F("move");
         movingName += gate;
 
-        addFormNumericBox(
-          movingLabel,
-          movingName,
-          config.moveThreshold[gate],
-          0,
-          2147483647L
-        );
+        addFormNumericBox(movingLabel, movingName, config.moveThreshold[gate], 0, 2147483647L);
 
         String stillLabel = F("Gate ");
         stillLabel += gate;
@@ -222,13 +216,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
         String stillName = F("still");
         stillName += gate;
 
-        addFormNumericBox(
-          stillLabel,
-          stillName,
-          config.stillThreshold[gate],
-          0,
-          2147483647L
-        );
+        addFormNumericBox(stillLabel, stillName, config.stillThreshold[gate], 0, 2147483647L);
       }
 
       // ---------------------------------------------------------------------------------------------
@@ -257,12 +245,11 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
       const int baud = getFormItemInt(F("baud"));
 
-      PCONFIG(P189_BAUD_INDEX) =
-        baud == P189_BAUD_256000 ? P189_BAUD_256000 : P189_BAUD_115200;
+      PCONFIG(P189_BAUD_INDEX) = baud == P189_BAUD_256000 ? P189_BAUD_256000 : P189_BAUD_115200;
 
       config.minGate = getFormItemInt(F("mingate"));
       config.maxGate = getFormItemInt(F("maxgate"));
-
+      
       if (config.minGate > 15) {
         config.minGate = 15;
       }
@@ -297,8 +284,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       config.version = P189_CONFIG_VERSION;
       P189_data_struct::saveConfig(event->TaskIndex, config);
 
-      P189_data_struct *P189_data =
-        static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+      P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
 
       if (P189_data != nullptr) {
         success = P189_data->applyConfiguration();
@@ -319,38 +305,21 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       const int8_t txPin = serialHelper_getTxPin(event);
       const ESPEasySerialPort portType = serialHelper_getSerialType(event);
 
-      const uint32_t baudRate =
-        PCONFIG(P189_BAUD_INDEX) == P189_BAUD_256000 ? 256000 : 115200;
+      const uint32_t baudRate = PCONFIG(P189_BAUD_INDEX) == P189_BAUD_256000 ? 256000 : 115200;
 
       P189_config_t config;
       P189_data_struct::loadConfig(event->TaskIndex, config);
 
-      success = initPluginTaskData(
-        event->TaskIndex,
-        new (std::nothrow) P189_data_struct(
-          portType,
-          rxPin,
-          txPin,
-          baudRate,
-          config
-        )
-      );
+      success = initPluginTaskData(event->TaskIndex, new (std::nothrow) P189_data_struct(portType, rxPin, txPin, baudRate, config));
 
       if (success) {
-        P189_data_struct *P189_data =
-          static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+        P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
 
         if (P189_data != nullptr) {
           success = P189_data->init();
         }
       }
-
-      String logMessage = concat(F("P189: INIT, baud="), String(baudRate));
-      logMessage += F(", success=");
-      logMessage += success ? 1 : 0;
-
-      addLog(LOG_LEVEL_INFO, logMessage);
-
+      addLog(LOG_LEVEL_INFO, strformat(F("P189: INIT, baud=%d, success=%d"), baudRate, success ? 1 : 0));
       break;
     }
 
@@ -360,8 +329,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
     case PLUGIN_READ:
     {
-      P189_data_struct *P189_data =
-        static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+      P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
 
       if (P189_data != nullptr) {
         success = P189_data->plugin_read(event);
@@ -376,8 +344,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
     case PLUGIN_WRITE:
     {
-      P189_data_struct *P189_data =
-        static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+      P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
 
       if (P189_data != nullptr) {
         success = P189_data->plugin_write(event, string);
@@ -392,8 +359,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
     case PLUGIN_GET_CONFIG_VALUE:
     {
-      P189_data_struct *P189_data =
-        static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+      P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
 
       if (P189_data != nullptr) {
         success = P189_data->plugin_get_config_value(event, string);
@@ -408,8 +374,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
     case PLUGIN_TEN_PER_SECOND:
     {
-      P189_data_struct *P189_data =
-        static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+      P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
 
       if (P189_data != nullptr) {
         success = P189_data->processSensor(event);
@@ -424,8 +389,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
     case PLUGIN_FIFTY_PER_SECOND:
     {
-      P189_data_struct *P189_data =
-        static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+      P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
 
       if (P189_data != nullptr) {
         success = P189_data->processSensor(event);
@@ -440,8 +404,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
     case PLUGIN_EXIT:
     {
-      P189_data_struct *P189_data =
-        static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+      P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
 
       if (P189_data != nullptr) {
         P189_data->disconnectSerial();
