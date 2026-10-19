@@ -114,9 +114,18 @@ bool P189_data_struct::init()
   delay(50);
   flushSerial();
   _initialized = true;
- 
-  addLog(LOG_LEVEL_INFO, strformat(F("P189: LD2420 UART initialized at %d baud"), _baudRate));
 
+  // Allow the LD2420 to finish booting
+  delay(200);
+
+  if (!setEnergyOutputMode()) {
+    addLog(LOG_LEVEL_ERROR,F("P189: Failed to enable energy output mode"));
+  } else {
+    _lastModeAttemptMillis = millis();
+    _lastEnergyFrameMillis = millis();
+    addLog(LOG_LEVEL_INFO, F("P189: Energy output mode enabled"));
+  }
+  addLog(LOG_LEVEL_INFO, strformat(F("P189: LD2420 UART initialized at %d baud"), _baudRate));
   return true;
 }
 
@@ -150,16 +159,28 @@ bool P189_data_struct::processSensor(EventStruct *event)
 
   while (_serial->available() > 0) {
     const int value = _serial->read();
-
     if (value < 0) {
       break;
     }
-
     if (processByte(static_cast<uint8_t>(value))) {
       received = true;
+      _lastEnergyFrameMillis = millis();
     }
   }
 
+  const uint32_t now = millis();
+
+  // No valid energy frame received for 3 seconds, try to restore energy output mode
+  if ((now - _lastEnergyFrameMillis >= 3000) && (now - _lastModeAttemptMillis >= 5000)) {
+    _lastModeAttemptMillis = now;
+    addLog(LOG_LEVEL_INFO, F("P189: No energy frames, restoring energy mode"));
+    if (setEnergyOutputMode()) {
+      _lastEnergyFrameMillis = millis();
+      addLog(LOG_LEVEL_INFO, F("P189: Energy output mode restored"));
+    } else {
+      addLog(LOG_LEVEL_ERROR, F("P189: Failed to restore energy output mode"));
+    }
+  }
   return received;
 }
 
@@ -945,6 +966,7 @@ bool P189_data_struct::processByte(uint8_t value)
 
     case P189_ParseState::Footer4:
       if (value == 0xF5) {
+        addLog(LOG_LEVEL_DEBUG, strformat(F("P189: RX EnergyFramePayload: %s"), formatToHex_array(_frameBuffer, _frameLength)));
         const bool result = parseEnergyFrame();
         resetParser();
         return result;
