@@ -966,7 +966,16 @@ bool P189_data_struct::processByte(uint8_t value)
 
     case P189_ParseState::Footer4:
       if (value == 0xF5) {
-        addLog(LOG_LEVEL_DEBUG, strformat(F("P189: RX EnergyFramePayload: %s"), formatToHex_array(_frameBuffer, _frameLength)));
+
+        // Micha-he: Remove Debug
+        String hexData;
+        for (size_t i = 0; i < _frameLength; ++i) {
+          char tmp[4];
+            snprintf(tmp, sizeof(tmp), "%02X ", static_cast<unsigned>(_frameBuffer[i]));
+            hexData += tmp;
+        }
+        addLog(LOG_LEVEL_DEBUG, strformat(F("P189: RX EnergyFramePayload: ") + hexData));
+
         const bool result = parseEnergyFrame();
         resetParser();
         return result;
@@ -1007,10 +1016,9 @@ bool P189_data_struct::parseEnergyFrame()
   //
   // Payload:
   //
-  // 0:      data type
-  // 1:      presence
-  // 2..3:   distance
-  // 4..35:  16 gate energies
+  // 0:      presence
+  // 1..2:   distance
+  // 3..35:  16 gate energies
   //
 
   if (_frameBuffer[0] != 0x01) {
@@ -1024,7 +1032,7 @@ bool P189_data_struct::parseEnergyFrame()
   _maxGate = 0;
 
   for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
-    const uint16_t offset = static_cast<uint16_t>(4 + gate * 2);
+    const uint16_t offset = static_cast<uint16_t>(3 + gate * 2);
 
     _gateEnergy[gate] = readLE16(&_frameBuffer[offset]);
 
