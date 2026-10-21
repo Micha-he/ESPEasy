@@ -100,6 +100,7 @@ public:
   bool plugin_read(EventStruct *event);
   bool plugin_write(EventStruct *event, String& string);
   bool plugin_get_config_value(EventStruct *event, String& string);
+  bool plugin_webform_save(EventStruct *event);
 
 
   // ===============================================================================================

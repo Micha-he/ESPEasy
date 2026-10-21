@@ -240,61 +240,18 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
     case PLUGIN_WEBFORM_SAVE:
     {
-      P189_config_t config;
-      P189_data_struct::loadConfig(event->TaskIndex, config);
-
       const int baud = getFormItemInt(F("baud"));
-
       PCONFIG(P189_BAUD_INDEX) = baud == P189_BAUD_256000 ? P189_BAUD_256000 : P189_BAUD_115200;
-
-      config.minGate = getFormItemInt(F("mingate"));
-      config.maxGate = getFormItemInt(F("maxgate"));
-      
-      if (config.minGate > 15) {
-        config.minGate = 15;
-      }
-
-      if (config.maxGate > 15) {
-        config.maxGate = 15;
-      }
-
-      if (config.minGate > config.maxGate) {
-        const uint32_t temp = config.minGate;
-        config.minGate = config.maxGate;
-        config.maxGate = temp;
-      }
-
-      config.timeout = getFormItemInt(F("timeout"));
-
-      if (config.timeout == 0) {
-        config.timeout = P189_DEFAULT_TIMEOUT;
-      }
-
-      for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
-        String movingName = F("move");
-        movingName += gate;
-
-        String stillName = F("still");
-        stillName += gate;
-
-        config.moveThreshold[gate] = getFormItemInt(movingName);
-        config.stillThreshold[gate] = getFormItemInt(stillName);
-      }
-
-      config.version = P189_CONFIG_VERSION;
-      P189_data_struct::saveConfig(event->TaskIndex, config);
-
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
-
       if (P189_data != nullptr) {
-        success = P189_data->applyConfiguration();
+        success = P189_data->plugin_webform_save(event);
       } else {
-        success = true;
+        success = false;
+        addLog(LOG_LEVEL_INFO,F("P189: WEBFORM_SAVE failed - plugin data not initialized"));
       }
-
       break;
     }
-
+  
     // -----------------------------------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------------------------------
@@ -387,20 +344,19 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // 50 Hz scheduler
     // -----------------------------------------------------------------------------------------------
 
-    case PLUGIN_FIFTY_PER_SECOND:
-    {
-      P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+    // case PLUGIN_FIFTY_PER_SECOND:
+    // {
+    //   P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
+    //   if (P189_data != nullptr)
+    //   {
+    //     success = P189_data->processSensor(event);
+    //   }
+    //   break;
+    // }
 
-      if (P189_data != nullptr) {
-        success = P189_data->processSensor(event);
-      }
-
-      break;
-    }
-
-    // -----------------------------------------------------------------------------------------------
-    // Exit
-    // -----------------------------------------------------------------------------------------------
+      // -----------------------------------------------------------------------------------------------
+      // Exit
+      // -----------------------------------------------------------------------------------------------
 
     case PLUGIN_EXIT:
     {
