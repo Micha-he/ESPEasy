@@ -1,17 +1,24 @@
 #include "_Plugin_Helper.h"
-
-// #######################################################################################################
-// ########################### Plugin 189: HLK-LD2420 Radar #############################################
-// #######################################################################################################
-
 #ifdef USES_P189
 
-# include "src/PluginStructs/P189_data_struct.h"
+// #######################################################################################################
+// ########################### Plugin 189: HLK-LD2420 Radar ##############################################
+// #######################################################################################################
+//
+// For HLK-LD2420 V1.5.4 or greater
+//
+// Changelog:
+//
+// #######################################################################################################
 
+# include "src/PluginStructs/P189_data_struct.h"
 # define PLUGIN_189
 # define PLUGIN_ID_189   189
 # define PLUGIN_NAME_189 "Presence - LD2420"
-
+# define PLUGIN_VALUENAME1_189 "Presence"
+# define PLUGIN_VALUENAME2_189 "Distance"
+# define PLUGIN_VALUENAME3_189 "Energy"
+# define PLUGIN_VALUENAME4_189 "Gate"
 
 // =======================================================================================================
 // Configuration indices
@@ -27,7 +34,6 @@
 boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 {
   boolean success = false;
-
   switch (function)
   {
     // -----------------------------------------------------------------------------------------------
@@ -51,7 +57,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       dev.ExitTaskBeforeSave = false;
       dev.CustomVTypeVar   = true;
       dev.SerialPortsAllowed = INCLUDE_NOT_CDC_SERIAL;
-
       break;
     }
 
@@ -71,19 +76,16 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 
     case PLUGIN_GET_DEVICEVALUENAMES:
     {
-      ExtraTaskSettings.setTaskDeviceValueName(0, F("Presence"));
-      ExtraTaskSettings.setTaskDeviceValueName(1, F("Distance"));
-      ExtraTaskSettings.setTaskDeviceValueName(2, F("Energy"));
-      ExtraTaskSettings.setTaskDeviceValueName(3, F("Gate"));
-
+      strcpy_P(ExtraTaskSettings.TaskDeviceValueNames[0], PSTR(PLUGIN_VALUENAME1_189));
+      strcpy_P(ExtraTaskSettings.TaskDeviceValueNames[1], PSTR(PLUGIN_VALUENAME2_189));
+      strcpy_P(ExtraTaskSettings.TaskDeviceValueNames[2], PSTR(PLUGIN_VALUENAME3_189));
+      strcpy_P(ExtraTaskSettings.TaskDeviceValueNames[3], PSTR(PLUGIN_VALUENAME4_189));
       for (uint8_t i = 0; i < P189_NR_OUTPUT_VALUES; ++i) {
         ExtraTaskSettings.TaskDeviceValueDecimals[i] = 0;
       }
-
-      for (uint8_t i = P189_NR_OUTPUT_VALUES; i < VARS_PER_TASK; ++i) {
-        ExtraTaskSettings.clearTaskDeviceValueName(i);
-      }
-
+      // for (uint8_t i = P189_NR_OUTPUT_VALUES; i < VARS_PER_TASK; ++i) {
+      //   ExtraTaskSettings.clearTaskDeviceValueName(i);
+      // }
       break;
     }
 
@@ -160,25 +162,21 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
           F("115200"),
           F("256000")
         };
-
         const int optionValues[] = {
           P189_BAUD_115200,
           P189_BAUD_256000
         };
-
         const FormSelectorOptions selector(
           NR_ELEMENTS(optionValues),
           options,
           optionValues
         );
-
         selector.addFormSelector(
           F("Baud rate"),
           F("baud"),
           PCONFIG(P189_BAUD_INDEX)
         );
       }
-
       addFormNote(F("The LD2420 must use the same baud rate as the ESP."));
 
       // ---------------------------------------------------------------------------------------------
@@ -186,11 +184,9 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       // ---------------------------------------------------------------------------------------------
 
       addFormSubHeader(F("LD2420 detection configuration"));
-
       addFormNumericBox(F("Minimum Gate"), F("mingate"), config.minGate, 0, 15);
       addFormNumericBox(F("Maximum Gate"), F("maxgate"), config.maxGate, 0, 15);
-      addFormNumericBox(F("Presence Timeout"), F("timeout"), config.timeout, 1, 65535);
-
+      addFormNumericBox(F("Timeout"), F("timeout"), config.timeout, 1, 65535);
       addUnit(F("s"));
 
       // ---------------------------------------------------------------------------------------------
@@ -198,24 +194,18 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       // ---------------------------------------------------------------------------------------------
 
       addFormSubHeader(F("Gate thresholds"));
-
       for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
         String movingLabel = F("Gate ");
         movingLabel += gate;
         movingLabel += F(" Moving");
-
         String movingName = F("move");
         movingName += gate;
-
         addFormNumericBox(movingLabel, movingName, config.moveThreshold[gate], 0, 2147483647L);
-
         String stillLabel = F("Gate ");
         stillLabel += gate;
         stillLabel += F(" Still");
-
         String stillName = F("still");
         stillName += gate;
-
         addFormNumericBox(stillLabel, stillName, config.stillThreshold[gate], 0, 2147483647L);
       }
 
@@ -229,7 +219,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       addFormNote(F("ld2420,apply"));
       addFormNote(F("ld2420,factoryreset"));
       addFormNote(F("ld2420,restart"));
-
       success = true;
       break;
     }
@@ -261,17 +250,12 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       const int8_t rxPin = serialHelper_getRxPin(event);
       const int8_t txPin = serialHelper_getTxPin(event);
       const ESPEasySerialPort portType = serialHelper_getSerialType(event);
-
       const uint32_t baudRate = PCONFIG(P189_BAUD_INDEX) == P189_BAUD_256000 ? 256000 : 115200;
-
       P189_config_t config;
       P189_data_struct::loadConfig(event->TaskIndex, config);
-
       success = initPluginTaskData(event->TaskIndex, new (std::nothrow) P189_data_struct(portType, rxPin, txPin, baudRate, config));
-
       if (success) {
         P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
-
         if (P189_data != nullptr) {
           success = P189_data->init();
         }
@@ -287,11 +271,9 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     case PLUGIN_READ:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
-
       if (P189_data != nullptr) {
         success = P189_data->plugin_read(event);
       }
-
       break;
     }
 
@@ -302,11 +284,9 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     case PLUGIN_WRITE:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
-
       if (P189_data != nullptr) {
         success = P189_data->plugin_write(event, string);
       }
-
       break;
     }
 
@@ -317,11 +297,9 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     case PLUGIN_GET_CONFIG_VALUE:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
-
       if (P189_data != nullptr) {
         success = P189_data->plugin_get_config_value(event, string);
       }
-
       break;
     }
 
@@ -332,27 +310,12 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     case PLUGIN_TEN_PER_SECOND:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
-
       if (P189_data != nullptr) {
         success = P189_data->processSensor(event);
       }
-
       break;
     }
 
-    // -----------------------------------------------------------------------------------------------
-    // 50 Hz scheduler
-    // -----------------------------------------------------------------------------------------------
-
-    // case PLUGIN_FIFTY_PER_SECOND:
-    // {
-    //   P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
-    //   if (P189_data != nullptr)
-    //   {
-    //     success = P189_data->processSensor(event);
-    //   }
-    //   break;
-    // }
 
       // -----------------------------------------------------------------------------------------------
       // Exit
@@ -361,16 +324,13 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     case PLUGIN_EXIT:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
-
       if (P189_data != nullptr) {
         P189_data->disconnectSerial();
       }
-
       success = true;
       break;
     }
   }
-
   return success;
 }
 
