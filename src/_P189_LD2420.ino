@@ -219,6 +219,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       addFormNote(F("ld2420,apply"));
       addFormNote(F("ld2420,factoryreset"));
       addFormNote(F("ld2420,restart"));
+      addFormNote(F("ld2420,logenergy"));
       success = true;
       break;
     }

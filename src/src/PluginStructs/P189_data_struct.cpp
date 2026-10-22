@@ -388,6 +388,17 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
   if (equals(parameter, F("normal"))) {
     return setBasicStatusMode();
   }
+  if (equals(parameter, F("logenergy"))) {
+    String logMessage = F("P189: Last gate energy values:");
+    for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
+      logMessage += F(" G");
+      logMessage += gate;
+      logMessage += F("=");
+      logMessage += _gateEnergy[gate];
+    }
+    addLog(LOG_LEVEL_INFO, logMessage);
+    return true;
+  }
   return false;
 }
 
