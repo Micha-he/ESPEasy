@@ -10,7 +10,6 @@
 // Changelog:
 //
 // #######################################################################################################
-
 # include "src/PluginStructs/P189_data_struct.h"
 # define PLUGIN_189
 # define PLUGIN_ID_189   189
@@ -23,14 +22,11 @@
 // =======================================================================================================
 // Configuration indices
 // =======================================================================================================
-
 #define P189_BAUD_INDEX 0
-
 
 // =======================================================================================================
 // Plugin
 // =======================================================================================================
-
 boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
 {
   boolean success = false;
@@ -63,7 +59,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Device name
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_GET_DEVICENAME:
     {
       string = F(PLUGIN_NAME_189);
@@ -73,7 +68,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Value names
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_GET_DEVICEVALUENAMES:
     {
       strcpy_P(ExtraTaskSettings.TaskDeviceValueNames[0], PSTR(PLUGIN_VALUENAME1_189));
@@ -92,7 +86,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // GPIO
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_GET_DEVICEGPIONAMES:
     {
       serialHelper_getGpioNames(event);
@@ -102,7 +95,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Serial configuration
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_WEBFORM_SHOW_CONFIG:
     {
       string += serialHelper_getSerialTypeLabel(event);
@@ -113,7 +105,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Number of values
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_GET_DEVICEVALUECOUNT:
     {
       event->Par1 = P189_NR_OUTPUT_VALUES;
@@ -124,7 +115,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Sensor type
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_GET_DEVICEVTYPE:
     {
       event->sensorType = Sensor_VType::SENSOR_TYPE_QUAD;
@@ -136,7 +126,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Defaults
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_SET_DEFAULTS:
     {
       PCONFIG(P189_BAUD_INDEX) = P189_BAUD_115200;
@@ -147,7 +136,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Webform load
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_WEBFORM_LOAD:
     {
       P189_config_t config;
@@ -156,7 +144,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       // ---------------------------------------------------------------------------------------------
       // Baudrate
       // ---------------------------------------------------------------------------------------------
-
       {
         const __FlashStringHelper *options[] = {
           F("115200"),
@@ -178,21 +165,17 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
         );
       }
       addFormNote(F("The LD2420 must use the same baud rate as the ESP."));
-
       // ---------------------------------------------------------------------------------------------
       // Detection configuration
       // ---------------------------------------------------------------------------------------------
-
       addFormSubHeader(F("LD2420 detection configuration"));
       addFormNumericBox(F("Minimum Gate"), F("mingate"), config.minGate, 0, 15);
       addFormNumericBox(F("Maximum Gate"), F("maxgate"), config.maxGate, 0, 15);
       addFormNumericBox(F("Timeout"), F("timeout"), config.timeout, 1, 65535);
       addUnit(F("s"));
-
       // ---------------------------------------------------------------------------------------------
       // Gate thresholds
       // ---------------------------------------------------------------------------------------------
-
       addFormSubHeader(F("Gate thresholds"));
       for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
         String movingLabel = F("Gate ");
@@ -208,11 +191,9 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
         stillName += gate;
         addFormNumericBox(stillLabel, stillName, config.stillThreshold[gate], 0, 2147483647L);
       }
-
       // ---------------------------------------------------------------------------------------------
       // Sensor actions
       // ---------------------------------------------------------------------------------------------
-
       addFormSubHeader(F("LD2420 sensor actions"));
       addFormNote(F("Use these commands from Tools > Command:"));
       addFormNote(F("ld2420,readconfig"));
@@ -227,7 +208,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Webform save
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_WEBFORM_SAVE:
     {
       const int baud = getFormItemInt(F("baud"));
@@ -245,7 +225,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_INIT:
     {
       const int8_t rxPin = serialHelper_getRxPin(event);
@@ -268,7 +247,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Read
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_READ:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
@@ -281,7 +259,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Commands
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_WRITE:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
@@ -294,7 +271,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // [Task#Value]
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_GET_CONFIG_VALUE:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
@@ -307,7 +283,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // 10 Hz scheduler
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_TEN_PER_SECOND:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
@@ -318,10 +293,9 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     }
 
 
-      // -----------------------------------------------------------------------------------------------
-      // Exit
-      // -----------------------------------------------------------------------------------------------
-
+    // -----------------------------------------------------------------------------------------------
+    // Exit
+    // -----------------------------------------------------------------------------------------------
     case PLUGIN_EXIT:
     {
       P189_data_struct *P189_data = static_cast<P189_data_struct *>(getPluginTaskData(event->TaskIndex));
@@ -334,5 +308,4 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
   }
   return success;
 }
-
 #endif // USES_P189

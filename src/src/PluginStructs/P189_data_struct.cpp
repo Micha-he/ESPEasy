@@ -2,19 +2,26 @@
 #ifdef USES_P189
 
 // =======================================================================================================
+// define expressions
+// =======================================================================================================
+static constexpr uint8_t P189_ENERGY_HEADER[] = {
+  0xF4, 0xF3, 0xF2, 0xF1
+};
+static constexpr uint8_t P189_ENERGY_FOOTER[] = {
+  0xF8, 0xF7, 0xF6, 0xF5
+};
+
+// =======================================================================================================
 // Constructor
 // =======================================================================================================
-
 P189_data_struct::P189_data_struct(ESPEasySerialPort portType, int8_t rxPin, int8_t txPin, uint32_t baudRate, const P189_config_t& config):_portType(portType), _rxPin(rxPin), _txPin(txPin), _baudRate(baudRate), _config(config)
 {
   resetParser();
 }
 
-
 // =======================================================================================================
 // Default configuration
 // =======================================================================================================
-
 static P189_config_t P189_defaultConfig()
 {
   P189_config_t config{};
@@ -29,11 +36,9 @@ static P189_config_t P189_defaultConfig()
   return config;
 }
 
-
 // =======================================================================================================
 // Load custom configuration
 // =======================================================================================================
-
 void P189_data_struct::loadConfig(taskIndex_t taskIndex, P189_config_t& config)
 {
   config = P189_defaultConfig();
@@ -60,31 +65,25 @@ void P189_data_struct::loadConfig(taskIndex_t taskIndex, P189_config_t& config)
   }
 }
 
-
 // =======================================================================================================
 // Save custom configuration
 // =======================================================================================================
-
 void P189_data_struct::saveConfig(taskIndex_t taskIndex, const P189_config_t& config)
 {
   SaveCustomTaskSettings(taskIndex, reinterpret_cast<const uint8_t *>(&config), sizeof(config));
 }
 
-
 // =======================================================================================================
 // Destructor
 // =======================================================================================================
-
 P189_data_struct::~P189_data_struct()
 {
   disconnectSerial();
 }
 
-
 // =======================================================================================================
 // Initialization
 // =======================================================================================================
-
 bool P189_data_struct::init()
 {
   if (_serial != nullptr) {
@@ -113,11 +112,9 @@ bool P189_data_struct::init()
   return true;
 }
 
-
 // =======================================================================================================
 // Disconnect
 // =======================================================================================================
-
 void P189_data_struct::disconnectSerial()
 {
   if (_serial != nullptr) {
@@ -128,11 +125,43 @@ void P189_data_struct::disconnectSerial()
   _initialized = false;
 }
 
+// =======================================================================================================
+// Match a byte-value in a sequence
+// =======================================================================================================
+bool P189_data_struct::matchSequenceByte(uint8_t value, const uint8_t *sequence, uint8_t sequenceLength)
+{
+  // Find the longest prefix that is also a suffix after the current byte has been appended.
+  while (_sequenceMatched > 0 && value != sequence[_sequenceMatched]) {
+    uint8_t fallback = _sequenceMatched - 1;
+    while (fallback > 0) {
+      bool matches = true;
+      for (uint8_t i = 0; i < fallback; ++i) {
+        if (sequence[i] !=
+            sequence[_sequenceMatched - fallback + i]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        break;
+      }
+      --fallback;
+    }
+    _sequenceMatched = fallback;
+  }
+  if (value == sequence[_sequenceMatched]) {
+    ++_sequenceMatched;
+  }
+  if (_sequenceMatched == sequenceLength) {
+    _sequenceMatched = 0;
+    return true;
+  }
+  return false;
+}
 
 // =======================================================================================================
 // Sensor processing
 // =======================================================================================================
-
 bool P189_data_struct::processSensor(EventStruct *event)
 {
   if (!_initialized || _serial == nullptr) {
@@ -164,11 +193,9 @@ bool P189_data_struct::processSensor(EventStruct *event)
   return received;
 }
 
-
 // =======================================================================================================
 // Task values
 // =======================================================================================================
-
 bool P189_data_struct::plugin_read(EventStruct *event)
 {
   if (!_initialized || event == nullptr) {
@@ -181,11 +208,9 @@ bool P189_data_struct::plugin_read(EventStruct *event)
   return true;
 }
 
-
 // =======================================================================================================
 // Read configuration from sensor
 // =======================================================================================================
-
 bool P189_data_struct::readConfiguration(P189_config_t& config)
 {
   if (!_initialized || _serial == nullptr) {
@@ -220,7 +245,6 @@ bool P189_data_struct::readConfiguration(P189_config_t& config)
   }
   return result;
 }
-
 
 // =======================================================================================================
 // Webform Save
@@ -260,11 +284,9 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
   return applyConfiguration();
 }
 
-
 // =======================================================================================================
 // Apply configuration
 // =======================================================================================================
-
 bool P189_data_struct::applyConfiguration()
 {
   if (!_initialized || _serial == nullptr) {
@@ -300,11 +322,9 @@ bool P189_data_struct::applyConfiguration()
   return result;
 }
 
-
 // =======================================================================================================
 // Factory reset
 // =======================================================================================================
-
 bool P189_data_struct::factoryReset()
 {
   if (!_initialized || _serial == nullptr) {
@@ -338,11 +358,9 @@ bool P189_data_struct::factoryReset()
   return true;
 }
 
-
 // =======================================================================================================
 // Restart sensor
 // =======================================================================================================
-
 bool P189_data_struct::restartSensor()
 {
   if (!_initialized || _serial == nullptr) {
@@ -357,11 +375,9 @@ bool P189_data_struct::restartSensor()
   return result;
 }
 
-
 // =======================================================================================================
 // Plugin command handler
 // =======================================================================================================
-
 bool P189_data_struct::plugin_write(EventStruct *event, String& string)
 {
   const String command = parseString(string, 1);
@@ -402,11 +418,9 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
   return false;
 }
 
-
 // =======================================================================================================
 // [Task#Value]
 // =======================================================================================================
-
 bool P189_data_struct::plugin_get_config_value(EventStruct *event, String& string)
 {
   const String valueName = parseString(event->String1, 1);
@@ -437,11 +451,9 @@ bool P189_data_struct::plugin_get_config_value(EventStruct *event, String& strin
   return false;
 }
 
-
 // =======================================================================================================
 // Little endian helpers
 // =======================================================================================================
-
 uint16_t P189_data_struct::readLE16(const uint8_t *data)
 {
   return static_cast<uint16_t>(data[0]) | (static_cast<uint16_t>(data[1]) << 8);
@@ -463,11 +475,9 @@ void P189_data_struct::writeLE32(uint8_t *data, uint32_t value)
   data[3] = static_cast<uint8_t>((value >> 24) & 0xFF);
 }
 
-
 // =======================================================================================================
 // Serial flush
 // =======================================================================================================
-
 void P189_data_struct::flushSerial()
 {
   if (_serial == nullptr) {
@@ -479,24 +489,21 @@ void P189_data_struct::flushSerial()
   resetParser();
 }
 
-
 // =======================================================================================================
 // Parser reset
 // =======================================================================================================
-
 void P189_data_struct::resetParser()
 {
-  _parseState = P189_ParseState::Header1;
+  _parseState = P189_ParseState::Header;
+  _sequenceMatched = 0;
   _frameLength = 0;
+  _frameLengthBytesReceived = 0;
   _framePayloadReceived = 0;
-  _frameBufferPos = 0;
 }
-
 
 // =======================================================================================================
 // Send LD2420 command
 // =======================================================================================================
-
 bool P189_data_struct::sendCommand(uint16_t command, const uint8_t *data, uint8_t dataLength, P189_CommandResponse *response, uint32_t timeoutMs)
 {
   if (_serial == nullptr) {
@@ -605,11 +612,9 @@ bool P189_data_struct::sendCommand(uint16_t command, const uint8_t *data, uint8_
   return false;
 }
 
-
 // =======================================================================================================
 // Configuration mode
 // =======================================================================================================
-
 bool P189_data_struct::setConfigMode(bool enable)
 {
   uint8_t data[2];
@@ -620,11 +625,9 @@ bool P189_data_struct::setConfigMode(bool enable)
   return sendCommand(0x00FE, nullptr, 0);
 }
 
-
 // =======================================================================================================
 // System mode
 // =======================================================================================================
-
 bool P189_data_struct::setSystemMode(uint16_t mode)
 {
   uint8_t data[6];
@@ -634,11 +637,9 @@ bool P189_data_struct::setSystemMode(uint16_t mode)
   return sendCommand(0x0012, data, sizeof(data));
 }
 
-
 // =======================================================================================================
 // Write Min/Max/Timeout
 // =======================================================================================================
-
 bool P189_data_struct::setMinMaxTimeout(uint32_t minGate, uint32_t maxGate, uint32_t timeout)
 {
   uint8_t data[18];
@@ -658,11 +659,9 @@ bool P189_data_struct::setMinMaxTimeout(uint32_t minGate, uint32_t maxGate, uint
   return sendCommand(0x0007, data, pos);
 }
 
-
 // =======================================================================================================
 // Read Min/Max/Timeout
 // =======================================================================================================
-
 bool P189_data_struct::readMinMaxTimeout(P189_config_t& config)
 {
   uint8_t data[6];
@@ -682,11 +681,9 @@ bool P189_data_struct::readMinMaxTimeout(P189_config_t& config)
   return true;
 }
 
-
 // =======================================================================================================
 // Write gate thresholds
 // =======================================================================================================
-
 bool P189_data_struct::setGateThreshold(uint8_t gate)
 {
   if (gate >= P189_NR_GATES) {
@@ -705,11 +702,9 @@ bool P189_data_struct::setGateThreshold(uint8_t gate)
   return sendCommand(0x0007, data, pos);
 }
 
-
 // =======================================================================================================
 // Read gate thresholds
 // =======================================================================================================
-
 bool P189_data_struct::readGateThreshold(uint8_t gate, uint32_t& moving, uint32_t& still)
 {
   if (gate >= P189_NR_GATES) {
@@ -730,11 +725,9 @@ bool P189_data_struct::readGateThreshold(uint8_t gate, uint32_t& moving, uint32_
   return true;
 }
 
-
 // =======================================================================================================
 // Energy mode
 // =======================================================================================================
-
 bool P189_data_struct::setEnergyOutputMode()
 {
   if (!setConfigMode(true)) {
@@ -748,11 +741,9 @@ bool P189_data_struct::setEnergyOutputMode()
   return result;
 }
 
-
 // =======================================================================================================
 // Normal/basic mode
 // =======================================================================================================
-
 bool P189_data_struct::setBasicStatusMode()
 {
   if (!setConfigMode(true)) {
@@ -766,111 +757,65 @@ bool P189_data_struct::setBasicStatusMode()
   return result;
 }
 
-
 // =======================================================================================================
-// Streaming parser
+// Parse data-stream
 // =======================================================================================================
-
 bool P189_data_struct::processByte(uint8_t value)
 {
   switch (_parseState) {
-    case P189_ParseState::Header1:
-      if (value == 0xF4) {
-        _parseState = P189_ParseState::Header2;
-      }
-      break;
-
-    case P189_ParseState::Header2:
-      if (value == 0xF3) {
-        _parseState = P189_ParseState::Header3;
-      } else {
-        _parseState = value == 0xF4 ? P189_ParseState::Header2 : P189_ParseState::Header1;
-      }
-      break;
-
-    case P189_ParseState::Header3:
-      if (value == 0xF2) {
-        _parseState = P189_ParseState::Header4;
-      } else {
-        _parseState = value == 0xF4 ? P189_ParseState::Header2 : P189_ParseState::Header1;
-      }
-      break;
-
-    case P189_ParseState::Header4:
-      if (value == 0xF1) {
-        _frameBufferPos = 0;
-        _framePayloadReceived = 0;
+    case P189_ParseState::Header:
+      if (matchSequenceByte(value, P189_ENERGY_HEADER, sizeof(P189_ENERGY_HEADER))) {
         _frameLength = 0;
-        _parseState = P189_ParseState::Length1;
-      } else {
-        _parseState = value == 0xF4 ? P189_ParseState::Header2 : P189_ParseState::Header1;
+        _frameLengthBytesReceived = 0;
+        _framePayloadReceived = 0;
+        _sequenceMatched = 0;
+        _parseState = P189_ParseState::Length;
       }
       break;
-
-    case P189_ParseState::Length1:
-      _frameLength = value;
-      _parseState = P189_ParseState::Length2;
-      break;
-
-    case P189_ParseState::Length2:
-      _frameLength |= static_cast<uint16_t>(value) << 8;
-
-      if (_frameLength == 0 || _frameLength > sizeof(_frameBuffer)) {
-        resetParser();
-
-        if (value == 0xF4) {
-          _parseState = P189_ParseState::Header2;
+    case P189_ParseState::Length:
+      if (_frameLengthBytesReceived == 0) {
+        // Little-endian: low byte first
+        _frameLength = value;
+        _frameLengthBytesReceived = 1;
+      } else {
+        // High byte
+        _frameLength |= static_cast<uint16_t>(value) << 8;
+        _frameLengthBytesReceived = 2;
+        if (_frameLength == 0 ||
+            _frameLength > sizeof(_frameBuffer)) {
+          recoverParser(value);
+          break;
         }
-
+        _framePayloadReceived = 0;
+        _sequenceMatched = 0;
+        _parseState = P189_ParseState::Payload;
+      }
+      break;
+    case P189_ParseState::Payload:
+      if (_framePayloadReceived >= sizeof(_frameBuffer) ||
+          _framePayloadReceived >= _frameLength) {
+        recoverParser(value);
         break;
       }
 
-      _frameBufferPos = 0;
-      _framePayloadReceived = 0;
-      _parseState = P189_ParseState::Payload;
-      break;
-
-    case P189_ParseState::Payload:
-      if (_framePayloadReceived < _frameLength) {
-        _frameBuffer[_framePayloadReceived++] = value;
-
-        if (_framePayloadReceived == _frameLength) {
-          _parseState = P189_ParseState::Footer1;
-        }
+      _frameBuffer[_framePayloadReceived++] = value;
+      if (_framePayloadReceived == _frameLength) {
+        _sequenceMatched = 0;
+        _parseState = P189_ParseState::Footer;
       }
       break;
-
-    case P189_ParseState::Footer1:
-      if (value == 0xF8) {
-        _parseState = P189_ParseState::Footer2;
-      } else {
-        recoverParser(value);
-      }
-      break;
-
-    case P189_ParseState::Footer2:
-      if (value == 0xF7) {
-        _parseState = P189_ParseState::Footer3;
-      } else {
-        recoverParser(value);
-      }
-      break;
-
-    case P189_ParseState::Footer3:
-      if (value == 0xF6) {
-        _parseState = P189_ParseState::Footer4;
-      } else {
-        recoverParser(value);
-      }
-      break;
-
-    case P189_ParseState::Footer4:
-      if (value == 0xF5) {
+    case P189_ParseState::Footer:
+      if (matchSequenceByte(
+            value,
+            P189_ENERGY_FOOTER,
+            sizeof(P189_ENERGY_FOOTER))) {
         addLog(LOG_LEVEL_DEBUG, F("P189: RX EnergyFrame: ") + formatToHex_array(_frameBuffer, _frameLength));
         const bool result = parseEnergyFrame();
         resetParser();
         return result;
-      } else {
+      }
+      // If the footer is invalid, look for a new header.
+      if (value == P189_ENERGY_HEADER[0]) {
         recoverParser(value);
       }
       break;
@@ -878,25 +823,21 @@ bool P189_data_struct::processByte(uint8_t value)
   return false;
 }
 
-
 // =======================================================================================================
 // Parser recovery
 // =======================================================================================================
-
 void P189_data_struct::recoverParser(uint8_t value)
 {
   resetParser();
-
-  if (value == 0xF4) {
-    _parseState = P189_ParseState::Header2;
+  // The current byte may already be the beginning of the next header.
+  if (value == P189_ENERGY_HEADER[0]) {
+    _sequenceMatched = 1;
   }
 }
 
-
 // =======================================================================================================
-// Energy frame
+// Parse energy frames
 // =======================================================================================================
-
 bool P189_data_struct::parseEnergyFrame()
 {
   if (_frameLength != 0x23) {
