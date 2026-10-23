@@ -184,7 +184,6 @@ private:
   // Sensor modes
   // ===============================================================================================
   bool setEnergyOutputMode();
-  bool setBasicStatusMode();
 };
 #endif // USES_P189
 #endif // PLUGINSTRUCTS_P189_DATA_STRUCT_H

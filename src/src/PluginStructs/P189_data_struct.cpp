@@ -49,11 +49,11 @@ void P189_data_struct::loadConfig(taskIndex_t taskIndex, P189_config_t& config)
     return;
   }
   config = stored;
-  if (config.minGate > 15) {
-    config.minGate = 15;
+  if (config.minGate > P189_NR_GATES - 1) {
+    config.minGate = P189_NR_GATES - 1;
   }
-  if (config.maxGate > 15) {
-    config.maxGate = 15;
+  if (config.maxGate > P189_NR_GATES - 1) {
+    config.maxGate = P189_NR_GATES - 1;
   }
   if (config.minGate > config.maxGate) {
     const uint32_t temp = config.minGate;
@@ -256,11 +256,11 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
   }
   _config.minGate = getFormItemInt(F("mingate"));
   _config.maxGate = getFormItemInt(F("maxgate"));
-  if (_config.minGate > 15) {
-    _config.minGate = 15;
+  if (_config.minGate > P189_NR_GATES - 1) {
+    _config.minGate = P189_NR_GATES - 1;
   }
-  if (_config.maxGate > 15) {
-    _config.maxGate = 15;
+  if (_config.maxGate > P189_NR_GATES - 1) {
+    _config.maxGate = P189_NR_GATES - 1;
   }
   if (_config.minGate > _config.maxGate) {
     const uint32_t temp = _config.minGate;
@@ -397,12 +397,6 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
   }
   if (equals(parameter, F("restart"))) {
     return restartSensor();
-  }
-  if (equals(parameter, F("energy"))) {
-    return setEnergyOutputMode();
-  }
-  if (equals(parameter, F("normal"))) {
-    return setBasicStatusMode();
   }
   if (equals(parameter, F("logenergy"))) {
     String logMessage = F("P189: Last gate energy values:");
@@ -676,8 +670,17 @@ bool P189_data_struct::readMinMaxTimeout(P189_config_t& config)
     return false;
   }
   config.minGate = readLE32(&response.data[0]);
+  if (config.minGate > P189_NR_GATES - 1) {
+    config.minGate = P189_NR_GATES - 1;
+  }
   config.maxGate = readLE32(&response.data[4]);
+  if (config.maxGate > P189_NR_GATES - 1) {
+    config.maxGate = P189_NR_GATES - 1;
+  }
   config.timeout = readLE32(&response.data[8]);
+  if (config.timeout > 65535) {
+    config.timeout = 65535;
+  }
   return true;
 }
 
@@ -734,22 +737,6 @@ bool P189_data_struct::setEnergyOutputMode()
     return false;
   }
   const bool result = setSystemMode(0x0004);
-  if (!setConfigMode(false)) {
-    return false;
-  }
-  flushSerial();
-  return result;
-}
-
-// =======================================================================================================
-// Normal/basic mode
-// =======================================================================================================
-bool P189_data_struct::setBasicStatusMode()
-{
-  if (!setConfigMode(true)) {
-    return false;
-  }
-  const bool result = setSystemMode(0x0064);
   if (!setConfigMode(false)) {
     return false;
   }
@@ -850,17 +837,13 @@ bool P189_data_struct::parseEnergyFrame()
   _maxEnergy = 0;
   _maxGate = 0;
   for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
-    if (gate >= _config.minGate && gate <= _config.maxGate) {
-      const uint16_t offset = static_cast<uint16_t>(3 + gate * 2);
-      _gateEnergy[gate] = readLE16(&_frameBuffer[offset]);
-      // addLog(LOG_LEVEL_DEBUG, strformat(F("P189: Energie Gate#%d: %d"), gate, _gateEnergy[gate]));
-      if (_gateEnergy[gate] > _maxEnergy) {
-        _maxEnergy = _gateEnergy[gate];
-        _maxGate = gate;
-      }
+    const uint16_t offset = static_cast<uint16_t>(3 + gate * 2);
+    _gateEnergy[gate] = readLE16(&_frameBuffer[offset]);
+    if (gate >= _config.minGate && gate <= _config.maxGate && _gateEnergy[gate] > _maxEnergy) {
+      _maxEnergy = _gateEnergy[gate];
+      _maxGate = gate;
     }
   }
   return true;
 }
-
 #endif // USES_P189

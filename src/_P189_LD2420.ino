@@ -35,7 +35,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     // -----------------------------------------------------------------------------------------------
     // Device
     // -----------------------------------------------------------------------------------------------
-
     case PLUGIN_DEVICE_ADD:
     {
       auto& dev = Device[++deviceCount];
@@ -140,7 +139,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
     {
       P189_config_t config;
       P189_data_struct::loadConfig(event->TaskIndex, config);
-
       // ---------------------------------------------------------------------------------------------
       // Baudrate
       // ---------------------------------------------------------------------------------------------
@@ -169,8 +167,8 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       // Detection configuration
       // ---------------------------------------------------------------------------------------------
       addFormSubHeader(F("LD2420 detection configuration"));
-      addFormNumericBox(F("Minimum Gate"), F("mingate"), config.minGate, 0, 15);
-      addFormNumericBox(F("Maximum Gate"), F("maxgate"), config.maxGate, 0, 15);
+      addFormNumericBox(F("Minimum Gate"), F("mingate"), config.minGate, 0, P189_NR_GATES - 1);
+      addFormNumericBox(F("Maximum Gate"), F("maxgate"), config.maxGate, 0, P189_NR_GATES - 1);
       addFormNumericBox(F("Timeout"), F("timeout"), config.timeout, 1, 65535);
       addUnit(F("s"));
       // ---------------------------------------------------------------------------------------------
@@ -291,7 +289,6 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       }
       break;
     }
-
 
     // -----------------------------------------------------------------------------------------------
     // Exit
