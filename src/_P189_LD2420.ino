@@ -14,10 +14,6 @@
 # define PLUGIN_189
 # define PLUGIN_ID_189   189
 # define PLUGIN_NAME_189 "Presence - LD2420"
-# define PLUGIN_VALUENAME1_189 "Presence"
-# define PLUGIN_VALUENAME2_189 "Distance"
-# define PLUGIN_VALUENAME3_189 "Energy"
-# define PLUGIN_VALUENAME4_189 "Gate"
 
 // =======================================================================================================
 // Configuration indices
@@ -47,7 +43,7 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
       dev.FormulaOption    = true;
       dev.SendDataOption   = true;
       dev.TimerOption      = true;
-      dev.TimerOptional    = true;
+      dev.TimerOptional    = false;
       dev.PluginStats      = true;
       dev.ExitTaskBeforeSave = false;
       dev.CustomVTypeVar   = true;

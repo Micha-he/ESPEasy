@@ -418,19 +418,19 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
 bool P189_data_struct::plugin_get_config_value(EventStruct *event, String& string)
 {
   const String valueName = parseString(event->String1, 1);
-  if (equals(valueName, F("Presence"))) {
+  if (equals(valueName, F(PLUGIN_VALUENAME1_189))) {
     string = _presence ? F("1") : F("0");
     return true;
   }
-  if (equals(valueName, F("Distance"))) {
+  if (equals(valueName, F(PLUGIN_VALUENAME2_189))) {
     string = String(_distance);
     return true;
   }
-  if (equals(valueName, F("Energy"))) {
+  if (equals(valueName, F(PLUGIN_VALUENAME3_189))) {
     string = String(_maxEnergy);
     return true;
   }
-  if (equals(valueName, F("Gate"))) {
+  if (equals(valueName, F(PLUGIN_VALUENAME4_189))) {
     string = String(_maxGate);
     return true;
   }

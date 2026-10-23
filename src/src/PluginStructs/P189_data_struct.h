@@ -5,14 +5,17 @@
 
 # define P189_NR_GATES              16
 # define P189_NR_OUTPUT_VALUES      4
-# define P189_CONFIG_VERSION        2
+# define P189_CONFIG_VERSION        1
 # define P189_BAUD_115200           0
 # define P189_BAUD_256000           1
 # define P189_DEFAULT_MIN_GATE      1
 # define P189_DEFAULT_MAX_GATE      12
 # define P189_DEFAULT_TIMEOUT       120
 # define P189_MAX_THRESHOLD         0xFFFFFFFFUL
-
+# define PLUGIN_VALUENAME1_189      "Presence"
+# define PLUGIN_VALUENAME2_189      "Distance"
+# define PLUGIN_VALUENAME3_189      "MaxEnergy"
+# define PLUGIN_VALUENAME4_189      "MaxEnergyGate"
 
 // =====================================================================================================
 // LD2420 factory values
