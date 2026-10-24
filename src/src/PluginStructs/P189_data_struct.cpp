@@ -359,7 +359,7 @@ bool P189_data_struct::factoryReset(taskIndex_t taskIndex)
     return false;
   }
   _config = verifiedConfig;
-  saveConfig(/* TaskIndex */, _config);
+  saveConfig(taskIndex, _config);
   addLog(LOG_LEVEL_INFO, F("P189: Factory configuration restored and verified"));
   return true;
 }
