@@ -730,6 +730,9 @@ bool P189_data_struct::readGateThreshold(uint8_t gate, uint32_t& moving, uint32_
   }
   moving = readLE32(&response.data[0]);
   still = readLE32(&response.data[4]);
+  if (moving > P189_MAX_THRESHOLD || still  > P189_MAX_THRESHOLD) {
+    return false;
+  }
   return true;
 }
 
