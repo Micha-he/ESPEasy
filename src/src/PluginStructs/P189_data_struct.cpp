@@ -697,6 +697,11 @@ bool P189_data_struct::setGateThreshold(uint8_t gate)
   if (gate >= P189_NR_GATES) {
     return false;
   }
+  if (_config.moveThreshold[gate] > P189_MAX_THRESHOLD ||
+      _config.stillThreshold[gate] > P189_MAX_THRESHOLD) {
+    addLog(LOG_LEVEL_ERROR, strformat(F("P189: Gate %u threshold exceeds maximum %u"), gate, static_cast<unsigned int>(P189_MAX_THRESHOLD)));
+    return false;
+  }
   uint8_t data[12];
   uint8_t pos = 0;
   writeLE16(&data[pos], static_cast<uint16_t>(0x0010 + gate));
