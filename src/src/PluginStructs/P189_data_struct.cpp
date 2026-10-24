@@ -279,9 +279,14 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
     _config.moveThreshold[gate] = getFormItemInt(movingName);
     _config.stillThreshold[gate] = getFormItemInt(stillName);
   }
+  const P189_config_t oldConfig = _config;
   _config.version = P189_CONFIG_VERSION;
+  if (!applyConfiguration()) {
+    _config = oldConfig;
+    return false;
+  }
   saveConfig(event->TaskIndex, _config);
-  return applyConfiguration();
+  return true;
 }
 
 // =======================================================================================================
@@ -833,7 +838,6 @@ bool P189_data_struct::parseEnergyFrame()
   // Payload: 0= presence, 1..2= distance, 3..34= 16 gate energies
   _presence = _frameBuffer[0] != 0;
   _distance = readLE16(&_frameBuffer[1]);
-  // addLog(LOG_LEVEL_DEBUG, strformat(F("P189: Distance: %d"), _distance));
   _maxEnergy = 0;
   _maxGate = 0;
   for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
