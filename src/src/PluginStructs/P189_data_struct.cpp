@@ -570,7 +570,7 @@ bool P189_data_struct::sendCommand(uint16_t command, const uint8_t *data, uint8_
         continue;
       }
       const uint16_t responseLength = readLE16(&rx[header + 4]);
-      if (responseLength > 80) {
+      if (responseLength < 4 || responseLength > 80) {
         continue;
       }
       const uint16_t totalLength = static_cast<uint16_t>(4 + 2 + responseLength + 4);
