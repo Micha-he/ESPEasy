@@ -88,7 +88,7 @@ public:
   // ===============================================================================================
   bool readConfiguration(P189_config_t& config);
   bool applyConfiguration();
-  bool factoryReset();
+  bool factoryReset(taskIndex_t taskIndex);
   bool restartSensor();
 
   // ===============================================================================================

@@ -330,7 +330,7 @@ bool P189_data_struct::applyConfiguration()
 // =======================================================================================================
 // Factory reset
 // =======================================================================================================
-bool P189_data_struct::factoryReset()
+bool P189_data_struct::factoryReset(taskIndex_t taskIndex)
 {
   if (!_initialized || _serial == nullptr) {
     return false;
@@ -359,6 +359,7 @@ bool P189_data_struct::factoryReset()
     return false;
   }
   _config = verifiedConfig;
+  saveConfig(/* TaskIndex */, _config);
   addLog(LOG_LEVEL_INFO, F("P189: Factory configuration restored and verified"));
   return true;
 }
@@ -398,7 +399,7 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
     return applyConfiguration();
   }
   if (equals(parameter, F("factoryreset"))) {
-    return factoryReset();
+    return factoryReset(event->TaskIndex);
   }
   if (equals(parameter, F("restart"))) {
     return restartSensor();
