@@ -391,6 +391,15 @@ bool P189_data_struct::factoryReset(taskIndex_t taskIndex)
     addLog(LOG_LEVEL_ERROR, F("P189: Factory reset verification failed, Sensor config undefined!"));
     return false;
   }
+  bool matchesFactory = verifiedConfig.minGate == factoryConfig.minGate && verifiedConfig.maxGate == factoryConfig.maxGate && verifiedConfig.timeout == factoryConfig.timeout;
+  for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
+    matchesFactory = matchesFactory && verifiedConfig.moveThreshold[gate] == factoryConfig.moveThreshold[gate] && verifiedConfig.stillThreshold[gate] == factoryConfig.stillThreshold[gate];
+  }
+  if (!matchesFactory) {
+    _config = oldConfig;
+    addLog(LOG_LEVEL_ERROR, F("P189: Factory reset verification failed, values differ!"));
+    return false;
+  }
   _config = verifiedConfig;
   saveConfig(taskIndex, _config);
   addLog(LOG_LEVEL_INFO, F("P189: Factory configuration restored and verified"));
