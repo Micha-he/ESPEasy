@@ -294,14 +294,14 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
     String stillName = F("still");
     stillName += gate;
     int value = getFormItemInt(movingName);
-    if (value < 0 || value > P189_MAX_THRESHOLD) {
+    if (value < 0 || static_cast<uint32_t>(value) > P189_MAX_THRESHOLD) {
       addLog(LOG_LEVEL_ERROR, strformat(F("P189: Threshold for move must be between 0 and %u"), static_cast<unsigned int>(P189_MAX_THRESHOLD)));
       _config = oldConfig;
       return false;
     }
     _config.moveThreshold[gate] = value;
     value = getFormItemInt(stillName);
-    if (value < 0 || value > P189_MAX_THRESHOLD) {
+    if (value < 0 || static_cast<uint32_t>(value) > P189_MAX_THRESHOLD) {
       addLog(LOG_LEVEL_ERROR, strformat(F("P189: Threshold for still must be between 0 and %u"), static_cast<unsigned int>(P189_MAX_THRESHOLD)));
       _config = oldConfig;
       return false;
@@ -573,7 +573,6 @@ bool P189_data_struct::sendCommand(uint16_t command, const uint8_t *data, uint8_
   if (_serial == nullptr) {
     return false;
   }
-  uint8_t tx[80];
   uint8_t tx[80];
   constexpr size_t TX_BUFFER_SIZE = sizeof(tx);
   constexpr size_t TX_OVERHEAD = 12;  // Header (4) + Length (2) + Command (2) + Footer (4)
