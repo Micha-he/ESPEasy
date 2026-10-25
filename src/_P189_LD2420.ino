@@ -7,7 +7,11 @@
 //
 // For HLK-LD2420 V1.5.4 or greater
 //
+// Thanks to ChatGPT for Help ;-)
+// 
 // Changelog:
+//
+// 2026-10-25 Micha-he  First release
 //
 // #######################################################################################################
 # include "src/PluginStructs/P189_data_struct.h"
