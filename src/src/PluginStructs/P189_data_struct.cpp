@@ -574,6 +574,17 @@ bool P189_data_struct::sendCommand(uint16_t command, const uint8_t *data, uint8_
     return false;
   }
   uint8_t tx[80];
+  uint8_t tx[80];
+  constexpr size_t TX_BUFFER_SIZE = sizeof(tx);
+  constexpr size_t TX_OVERHEAD = 12;  // Header (4) + Length (2) + Command (2) + Footer (4)
+  if (dataLength > TX_BUFFER_SIZE - TX_OVERHEAD) {
+    addLog(LOG_LEVEL_INFO, F("P189: TX-command rejected, payload too large"));
+    return false;
+  }
+  if (dataLength > 0 && data == nullptr) {
+    addLog(LOG_LEVEL_INFO, F("P189: TX-command rejected, payload is null"));
+    return false;
+  }
   uint8_t pos = 0;
   // Header
   tx[pos++] = 0xFD;
