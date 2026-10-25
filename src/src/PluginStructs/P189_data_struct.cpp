@@ -63,6 +63,20 @@ void P189_data_struct::loadConfig(taskIndex_t taskIndex, P189_config_t& config)
   if (config.timeout == 0) {
     config.timeout = P189_DEFAULT_TIMEOUT;
   }
+  bool ValuesCorrected = false;
+  for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
+    if (config.moveThreshold[gate] > P189_MAX_THRESHOLD) {
+      config.moveThreshold[gate] = P189_FACTORY_MOVE[gate];
+      ValuesCorrected = true;
+    }
+    if (config.stillThreshold[gate] > P189_MAX_THRESHOLD) {
+      config.stillThreshold[gate] = P189_FACTORY_STILL[gate];
+      ValuesCorrected = true;
+    }
+  }
+  if (ValuesCorrected) {
+    addLog(LOG_LEVEL_INFO, F("P189: Invalid gate thresholds found, using factory defaults"));
+  }
 }
 
 // =======================================================================================================
@@ -445,6 +459,10 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
     return applyConfiguration();
   }
   if (equals(parameter, F("factoryreset"))) {
+    if (event == nullptr) {
+      addLog(LOG_LEVEL_INFO, F("P189: Factoryreset failed, invalid event"));
+      return false;
+    }
     return factoryReset(event->TaskIndex);
   }
   if (equals(parameter, F("restart"))) {
