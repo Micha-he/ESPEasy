@@ -256,6 +256,7 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
   if (event == nullptr) {
     return false;
   }
+  const P189_config_t oldConfig = _config;
   _config.minGate = getFormItemInt(F("mingate"));
   _config.maxGate = getFormItemInt(F("maxgate"));
   if (_config.minGate > P189_NR_GATES - 1) {
@@ -281,7 +282,6 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
     _config.moveThreshold[gate] = getFormItemInt(movingName);
     _config.stillThreshold[gate] = getFormItemInt(stillName);
   }
-  const P189_config_t oldConfig = _config;
   _config.version = P189_CONFIG_VERSION;
   if (!applyConfiguration()) {
     _config = oldConfig;
