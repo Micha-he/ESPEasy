@@ -435,7 +435,10 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
   const String parameter = parseString(string, 2);
   if (equals(parameter, F("readconfig"))) {
     P189_config_t config = _config;
-    return readConfiguration(config);
+    if (!readConfiguration(config)) {
+        return false;
+    }
+    saveConfig(taskIndex, _config);
   }
   if (equals(parameter, F("apply"))) {
     return applyConfiguration();
