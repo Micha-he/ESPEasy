@@ -217,31 +217,33 @@ bool P189_data_struct::readConfiguration(P189_config_t& config)
     return false;
   }
   if (!setConfigMode(true)) {
+    addLog(LOG_LEVEL_ERROR, F("P189: readConfiguration: enter config mode failed"));
     return false;
   }
   bool result = true;
   if (!readMinMaxTimeout(config)) {
+    addLog(LOG_LEVEL_ERROR, F("P189: readConfiguration: readMinMaxTimeout failed"));
     result = false;
   }
   if (result) {
     for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
       if (!readGateThreshold(gate, config.moveThreshold[gate], config.stillThreshold[gate])) {
+        addLog(LOG_LEVEL_ERROR, strformat(F("P189: readConfiguration: gate %d read failed"), gate));
         result = false;
         break;
       }
-
       delay(20);
     }
   }
   if (!setConfigMode(false)) {
+    addLog(LOG_LEVEL_ERROR, F("P189: readConfiguration: exit config mode failed"));
     result = false;
   }
   flushSerial();
   if (result) {
     config.version = P189_CONFIG_VERSION;
     _config = config;
-
-    addLog(LOG_LEVEL_INFO, F("P189: LD2420 configuration read successfully"));
+    addLog(LOG_LEVEL_INFO, F("P189: readConfiguration successfully"));
   }
   return result;
 }
@@ -349,13 +351,32 @@ bool P189_data_struct::factoryReset(taskIndex_t taskIndex)
   addLog(LOG_LEVEL_INFO, F("P189: Writing LD2420 factory configuration"));
   if (!applyConfiguration()) {
     _config = oldConfig;
-    addLog(LOG_LEVEL_ERROR, F("P189: Factory reset failed"));
+    // Reread sensor-config to verify
+    P189_config_t sensorConfig = oldConfig;
+    if (readConfiguration(sensorConfig)) {
+      bool unchanged = sensorConfig.minGate  == oldConfig.minGate && sensorConfig.maxGate  == oldConfig.maxGate && sensorConfig.timeout  == oldConfig.timeout;
+      for (uint8_t gate = 0; gate < P189_NR_GATES; ++gate) {
+        unchanged = unchanged && sensorConfig.moveThreshold[gate] == oldConfig.moveThreshold[gate] && sensorConfig.stillThreshold[gate] == oldConfig.stillThreshold[gate];
+      }
+      if (unchanged) {
+        addLog(LOG_LEVEL_INFO, F("P189: Factory reset failed, sensor-config is unchanged!"));
+      } else {
+        addLog(LOG_LEVEL_ERROR, F("P189: Factory reset failed, sensor-config differs from old config!"));
+      }
+    } else {
+      addLog(LOG_LEVEL_ERROR, F("P189: Factory reset failed, sensor-config couldn't read to verify!"));
+    }
+    // Factory reset failed, restore ok
+    _config = oldConfig;
+    addLog(LOG_LEVEL_ERROR, F("P189: Factory reset failed, sensor-config has keep previous state!"));
     return false;
   }
+  // Allow the LD2420 to settle after applying configuration
+  delay(20);
   P189_config_t verifiedConfig = factoryConfig;
   if (!readConfiguration(verifiedConfig)) {
     _config = oldConfig;
-    addLog(LOG_LEVEL_ERROR, F("P189: Factory reset verification failed"));
+    addLog(LOG_LEVEL_ERROR, F("P189: Factory reset verification failed, Sensor config undefined!"));
     return false;
   }
   _config = verifiedConfig;
