@@ -286,7 +286,7 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
       return false;
     }
     _config.moveThreshold[gate] = value;
-    const int value = getFormItemInt(stillName);
+    value = getFormItemInt(stillName);
     if (value < 0 || value > P189_MAX_THRESHOLD) {
       addLog(LOG_LEVEL_ERROR, strformat(F("P189: Threshold for still must be between 0 and %u"), static_cast<unsigned int>(P189_MAX_THRESHOLD)));
       _config = oldConfig;
