@@ -438,7 +438,7 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
     if (!readConfiguration(config)) {
         return false;
     }
-    saveConfig(taskIndex, _config);
+    saveConfig(event->TaskIndex, _config);
   }
   if (equals(parameter, F("apply"))) {
     return applyConfiguration();
