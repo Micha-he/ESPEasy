@@ -177,13 +177,13 @@ boolean Plugin_189(uint8_t function, struct EventStruct *event, String& string)
         movingLabel += F(" Moving");
         String movingName = F("move");
         movingName += gate;
-        addFormNumericBox(movingLabel, movingName, config.moveThreshold[gate], 0, 2147483647L);
+        addFormNumericBox(movingLabel, movingName, config.moveThreshold[gate], 0, P189_MAX_THRESHOLD);
         String stillLabel = F("Gate ");
         stillLabel += gate;
         stillLabel += F(" Still");
         String stillName = F("still");
         stillName += gate;
-        addFormNumericBox(stillLabel, stillName, config.stillThreshold[gate], 0, 2147483647L);
+        addFormNumericBox(stillLabel, stillName, config.stillThreshold[gate], 0, P189_MAX_THRESHOLD);
       }
       // ---------------------------------------------------------------------------------------------
       // Sensor actions

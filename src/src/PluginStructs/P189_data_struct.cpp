@@ -279,8 +279,20 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
     movingName += gate;
     String stillName = F("still");
     stillName += gate;
-    _config.moveThreshold[gate] = getFormItemInt(movingName);
-    _config.stillThreshold[gate] = getFormItemInt(stillName);
+    const int value = getFormItemInt(movingName);
+    if (value < 0 || value > P189_MAX_THRESHOLD) {
+      addLog(LOG_LEVEL_ERROR, strformat(F("P189: Threshold for move must be between 0 and %u"), static_cast<unsigned int>(P189_MAX_THRESHOLD)));
+      _config = oldConfig;
+      return false;
+    }
+    _config.moveThreshold[gate] = value;
+    const int value = getFormItemInt(stillName);
+    if (value < 0 || value > P189_MAX_THRESHOLD) {
+      addLog(LOG_LEVEL_ERROR, strformat(F("P189: Threshold for still must be between 0 and %u"), static_cast<unsigned int>(P189_MAX_THRESHOLD)));
+      _config = oldConfig;
+      return false;
+    }
+    _config.stillThreshold[gate] = value;
   }
   _config.version = P189_CONFIG_VERSION;
   if (!applyConfiguration()) {
@@ -719,8 +731,7 @@ bool P189_data_struct::setGateThreshold(uint8_t gate)
   if (gate >= P189_NR_GATES) {
     return false;
   }
-  if (_config.moveThreshold[gate] > P189_MAX_THRESHOLD ||
-      _config.stillThreshold[gate] > P189_MAX_THRESHOLD) {
+  if (_config.moveThreshold[gate] > P189_MAX_THRESHOLD || _config.stillThreshold[gate] > P189_MAX_THRESHOLD) {
     addLog(LOG_LEVEL_ERROR, strformat(F("P189: Gate %u threshold exceeds maximum %u"), gate, static_cast<unsigned int>(P189_MAX_THRESHOLD)));
     return false;
   }
