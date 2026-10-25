@@ -279,7 +279,7 @@ bool P189_data_struct::plugin_webform_save(EventStruct *event)
     movingName += gate;
     String stillName = F("still");
     stillName += gate;
-    const int value = getFormItemInt(movingName);
+    uint16_t value = getFormItemInt(movingName);
     if (value < 0 || value > P189_MAX_THRESHOLD) {
       addLog(LOG_LEVEL_ERROR, strformat(F("P189: Threshold for move must be between 0 and %u"), static_cast<unsigned int>(P189_MAX_THRESHOLD)));
       _config = oldConfig;
