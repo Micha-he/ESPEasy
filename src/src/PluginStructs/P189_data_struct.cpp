@@ -650,6 +650,9 @@ bool P189_data_struct::sendCommand(uint16_t command, const uint8_t *data, uint8_
       }
       const uint16_t responseLength = readLE16(&rx[header + 4]);
       if (responseLength < 4 || responseLength > 80) {
+        // Discard header, search at next Byte
+        memmove(rx, &rx[header + 1], rxPos - header - 1);
+        rxPos = rxPos - header - 1;
         continue;
       }
       const uint16_t totalLength = static_cast<uint16_t>(4 + 2 + responseLength + 4);
