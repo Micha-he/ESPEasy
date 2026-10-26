@@ -11,6 +11,7 @@
 # define P189_DEFAULT_MIN_GATE      1
 # define P189_DEFAULT_MAX_GATE      12
 # define P189_DEFAULT_TIMEOUT       120
+# define P189_MAX_TIMEOUT           65535UL
 # define P189_MAX_THRESHOLD         65535UL
 # define PLUGIN_VALUENAME1_189      "Presence"
 # define PLUGIN_VALUENAME2_189      "Distance"

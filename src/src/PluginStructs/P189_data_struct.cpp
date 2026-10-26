@@ -60,7 +60,7 @@ void P189_data_struct::loadConfig(taskIndex_t taskIndex, P189_config_t& config)
     config.minGate = config.maxGate;
     config.maxGate = temp;
   }
-  if (config.timeout == 0) {
+  if (config.timeout == 0 || config.timeout > P189_MAX_TIMEOUT) {
     config.timeout = P189_DEFAULT_TIMEOUT;
   }
   bool ValuesCorrected = false;
