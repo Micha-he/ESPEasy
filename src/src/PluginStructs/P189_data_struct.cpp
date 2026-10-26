@@ -438,6 +438,41 @@ bool P189_data_struct::restartSensor()
 }
 
 // =======================================================================================================
+// Firmware-version output at log
+// =======================================================================================================
+bool P189_data_struct::logFirmwareVersion()
+{
+  if (!_initialized || _serial == nullptr) {
+    addLog(LOG_LEVEL_INFO, F("P189: Cannot read firmware version, sensor not initialized"));
+    return false;
+  }
+  if (!setConfigMode(true)) {
+    addLog(LOG_LEVEL_INFO, F("P189: Failed to enter config mode for firmware read"));
+    return false;
+  }
+  P189_CommandResponse response;
+  const bool readResult = sendCommand(0x0000, nullptr, 0, &response);
+  const bool exitResult = setConfigMode(false);
+  flushSerial();
+  if (!readResult || !exitResult || response.dataLength < 2) {
+    addLog(LOG_LEVEL_INFO, F("P189: Failed to read firmware version"));
+    return false;
+  }
+  const uint16_t versionLength = readLE16(response.data);
+  if (versionLength == 0 || versionLength > response.dataLength - 2) {
+    addLog(LOG_LEVEL_INFO, F("P189: Invalid firmware version length"));
+    return false;
+  }
+  String version;
+  version.reserve(versionLength);
+  for (uint16_t i = 0; i < versionLength; ++i) {
+    version += static_cast<char>(response.data[2 + i]);
+  }
+  addLog(LOG_LEVEL_INFO, strformat(F("P189: LD2420 firmware version: %s"), version));
+  return true;
+}
+
+// =======================================================================================================
 // Plugin command handler
 // =======================================================================================================
 bool P189_data_struct::plugin_write(EventStruct *event, String& string)
@@ -482,6 +517,9 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
     }
     addLog(LOG_LEVEL_INFO, logMessage);
     return true;
+  }
+  if (equals(parameter, F("logversion"))) {
+    return logFirmwareVersion();
   }
   return false;
 }

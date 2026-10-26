@@ -136,6 +136,9 @@ Run these commands from **Tools > Command**:
 ``ld2420,logenergy``
   Output all 16 energy values in the log.
 
+``ld2420,logversion``
+  Output the sensor firmware-version in the log.
+
 Troubleshooting
 ---------------
 

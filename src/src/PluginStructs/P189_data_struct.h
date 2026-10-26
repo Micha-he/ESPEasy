@@ -91,6 +91,7 @@ public:
   bool applyConfiguration();
   bool factoryReset(taskIndex_t taskIndex);
   bool restartSensor();
+  bool logFirmwareVersion();
 
   // ===============================================================================================
   // State
