@@ -1,0 +1,23 @@
+name: Sync Fork
+
+on:
+  schedule:
+    # Täglich um Mitternacht UTC ausführen
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Erlaubt das manuelle Ausführen über die GitHub-Oberfläche
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Schreibrechte zum Aktualisieren des Forks nötig
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sync fork with upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh repo sync ${{ github.repository }} --branch mega
