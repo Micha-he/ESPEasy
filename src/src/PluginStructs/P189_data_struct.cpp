@@ -448,6 +448,10 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
   }
   const String parameter = parseString(string, 2);
   if (equals(parameter, F("readconfig"))) {
+    if (event == nullptr) {
+      addLog(LOG_LEVEL_INFO, F("P189: readconfig failed, invalid event"));
+      return false;
+    }
     P189_config_t config = _config;
     if (!readConfiguration(config)) {
         return false;
@@ -460,7 +464,7 @@ bool P189_data_struct::plugin_write(EventStruct *event, String& string)
   }
   if (equals(parameter, F("factoryreset"))) {
     if (event == nullptr) {
-      addLog(LOG_LEVEL_INFO, F("P189: Factoryreset failed, invalid event"));
+      addLog(LOG_LEVEL_INFO, F("P189: factoryreset failed, invalid event"));
       return false;
     }
     return factoryReset(event->TaskIndex);
