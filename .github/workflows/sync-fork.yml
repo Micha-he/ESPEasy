@@ -2,7 +2,7 @@ name: Sync Fork
 
 on:
   schedule:
-    # Täglich um Mitternacht UTC ausführen
+    # alle 30min ausführen
     - cron: '*/30 * * * *'
   workflow_dispatch: # Erlaubt das manuelle Ausführen über die GitHub-Oberfläche
 
