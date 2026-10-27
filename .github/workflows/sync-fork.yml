@@ -2,8 +2,8 @@ name: Sync Fork
 
 on:
   schedule:
-    # alle 6h um xx:15 ausführen
-    - cron: '15 */6 * * *'
+    # alle 6h um xx:13 ausführen
+    - cron: '13 */6 * * *'
   workflow_dispatch: # Erlaubt das manuelle Ausführen über die GitHub-Oberfläche
 
 jobs:
